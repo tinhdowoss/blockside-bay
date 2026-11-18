@@ -38,5 +38,9 @@ export function completion() {
   const story = game.missionsDone.length / 9;
   const skills = Object.values(game.skills).reduce((a, b) => a + b, 0) / 4;
   const stolen = Math.min(1, game.stats.stolen / 30);
-  return Math.round((story * 0.7 + skills * 0.2 + stolen * 0.1) * 100);
+  // Side content: SEA GLASS shards, race medals, taxi fares and parcel runs.
+  const s = game.side || {};
+  const medals = Object.values(s.raceMedal || {}).reduce((a, m) => a + ({ gold: 1, silver: 0.66, bronze: 0.33 }[m] || 0), 0) / 3;
+  const side = (s.shells?.length || 0) / 30 * 0.4 + medals * 0.3 + Math.min(1, (s.fares || 0) / 10) * 0.15 + Math.min(1, (s.runs || 0) / 3) * 0.15;
+  return Math.round((story * 0.6 + skills * 0.15 + stolen * 0.05 + side * 0.2) * 100);
 }

@@ -2,7 +2,7 @@
 import { MISSIONS, HINTS } from '../data/missions-data.js';
 import { WEAPONS } from '../core/config.js';
 import { city, collideCircle } from '../world/city.js';
-import { makeMarker } from '../world/models.js';
+import { makeMarker, fadeMarker } from '../world/models.js';
 import { Vehicle } from './vehicles.js';
 import { player } from './player.js';
 import { police, setWanted } from './police.js';
@@ -120,7 +120,8 @@ export function updateMissions(dt, t) {
       const p = lm(nm.start);
       startMarker.visible = true;
       startMarker.position.set(p.x, 0, p.z);
-      if (near(p, 3.5) && (!player.vehicle || player.vehicle.speed < 8)) startMission(nm);
+      // Story jobs wait while a side activity (race, fare, parcel run) is running.
+      if (near(p, 3.5) && (!player.vehicle || player.vehicle.speed < 8) && !game.sideBusy) startMission(nm);
     } else startMarker.visible = false;
     animateMarker(startMarker, t);
     return;
@@ -169,7 +170,8 @@ function animateMarker(m, t) {
   m.userData.chev.rotation.y = t * 2;
   // The beam pulses gently and thins out when the player stands right next to it.
   const d = Math.hypot(m.position.x - player.x, m.position.z - player.z);
-  if (m.userData.beam) m.userData.beam.material.opacity = (0.35 + 0.15 * Math.sin(t * 2.4)) * Math.min(1, 0.25 + d / 30);
+  fadeMarker(m, d);
+  if (m.userData.beam) m.userData.beam.material.opacity *= 0.85 + 0.15 * Math.sin(t * 2.4);
   if (m.userData.pool) m.userData.pool.scale.setScalar(1 + 0.12 * Math.sin(t * 3));
 }
 

@@ -6,6 +6,7 @@ import { police } from '../gameplay/police.js';
 import { shooters } from '../gameplay/combat.js';
 import { missionGoal, ms, nextMission } from '../gameplay/missions.js';
 import { vehicles } from '../gameplay/vehicles.js';
+import { activityPins, activityTarget, nearShells } from '../gameplay/activities.js';
 
 const PX = 2;                 // map pixels per world unit
 const ORIGIN = { x: -60, z: -60 };
@@ -99,6 +100,27 @@ export function drawMinimap(t) {
     if (!s.alive) continue;
     const p = proj(s.x, s.z);
     if (!p.edge) dot(g, p.x, p.y, s.boss ? 7 : 5, s.faction === 'police' ? '#3fa0ff' : '#ff2a2a', '#fff');
+  }
+  // Side activities: site pins nearby, SEA GLASS sparkles within 45 m, and the live race / job target.
+  for (const a of activityPins()) {
+    const p = proj(a.x, a.z);
+    if (p.edge) continue;
+    g.fillStyle = '#12061c'; g.beginPath(); g.arc(p.x, p.y, 9, 0, Math.PI * 2); g.fill();
+    g.fillStyle = a.color; g.beginPath(); g.arc(p.x, p.y, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#12061c'; g.font = 'bold 10px Arial Black, sans-serif'; g.textAlign = 'center'; g.fillText(a.ch, p.x, p.y + 4);
+  }
+  for (const s of nearShells()) {
+    const p = proj(s.x, s.z);
+    if (p.edge) continue;
+    g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 6);
+    g.fillStyle = '#5ffff0'; g.fillRect(p.x - 1.5, p.y - 5, 3, 10); g.fillRect(p.x - 5, p.y - 1.5, 10, 3);
+    g.globalAlpha = 1;
+  }
+  const at = activityTarget();
+  if (at) {
+    const p = proj(at.x, at.z);
+    g.fillStyle = blink || !p.edge ? '#5dff6a' : '#3fe8ff'; g.strokeStyle = '#12061c'; g.lineWidth = 3;
+    g.beginPath(); g.arc(p.x, p.y, 9, 0, Math.PI * 2); g.fill(); g.stroke();
   }
   const goal = missionGoal();
   if (goal) {

@@ -32,6 +32,7 @@ import { buildStorefronts } from '../world/storefronts.js';
 import { buildFurniture, updateFurniture } from '../world/furniture.js';
 import { buildClouds, updateClouds } from '../world/clouds.js';
 import { setupCarLights, updateCarLights } from '../fx/carlights.js';
+import { setupActivities, updateActivities, updateActivityHud, defaultSide, abortActivity } from '../gameplay/activities.js';
 
 const THREE = window.THREE;
 const params = new URLSearchParams(location.search);
@@ -68,6 +69,7 @@ setupPedestrians(scene);
 setupPolice(scene);
 setupCombat(scene, camera);
 setupMissions(scene);
+setupActivities(scene);
 setupDialogue();
 setupHud(camera);
 setupMinimap();
@@ -120,7 +122,7 @@ export function enterTitle() {
 function resetRun() {
   Object.assign(game, {
     cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false },
-    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], activeMission: null,
+    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], activeMission: null, side: defaultSide(), sideBusy: false,
     stats: { stolen: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, maxStars: 0, cuffed: 0, downed: 0, playSeconds: 0, stunts: 0 },
     skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   });
@@ -128,6 +130,7 @@ function resetRun() {
 
 function startPlaying(x, z) {
   hideMenus();
+  abortActivity();
   if (player.vehicle) exitVehicle();
   clearWanted();
   placePlayer(x, z, 0);
@@ -174,6 +177,7 @@ function resume() {
 function quitToTitle() {
   hideMenus();
   if (ms.def) failMission('QUIT');
+  abortActivity();
   enterTitle();
 }
 
@@ -259,6 +263,10 @@ function step(dt) {
   if (game.mode === 'play') {
     game.stats.playSeconds += dt;
     updatePlayer(dt);
+  }
+  // Side activities first: an open shop menu swallows the number keys before combat sees them.
+  updateActivities(dt, t, camera);
+  if (game.mode === 'play') {
     updateCombat(dt, t);
     if (player.vehicle) player.vehicle.controls.handbrake ||= false;
   }
@@ -289,7 +297,7 @@ function render(dt, now) {
     const a = now * 0.05;
     setCameraPose(SHOWCASE.x - 9 + Math.sin(a) * 2, 2.6, SHOWCASE.z + 7 + Math.cos(a) * 1.5, SHOWCASE.x - 1.5, 1.6, SHOWCASE.z - 1);
   } else if (game.mode !== 'title' && !frozen) updateCamera(dt, now);
-  if (game.mode === 'play' || game.mode === 'down' || SHOT) { updateHud(dt, now); drawMinimap(t); }
+  if (game.mode === 'play' || game.mode === 'down' || SHOT) { updateHud(dt, now); updateActivityHud(); drawMinimap(t); }
   updateAudio(dt, camera);
   updateHeliGlare(camera, night);
   if (game.mode !== 'play' && !SHOT) post.speed = 0;

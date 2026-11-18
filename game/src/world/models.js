@@ -181,6 +181,13 @@ export function makeHelicopter() {
 }
 
 // Glowing mission marker column + ground ring.
+// Thin a marker's column and beam as the viewer gets close (d = distance in world units).
+export function fadeMarker(m, d) {
+  const k = Math.min(1, Math.max(0, (d - 3) / 25));
+  m.children[0].material.opacity = 0.06 + 0.29 * k;
+  if (m.userData.beam) m.userData.beam.material.opacity = 0.08 + 0.42 * k;
+}
+
 export function makeMarker(color = '#ffd23f') {
   const g = new THREE.Group();
   const col = new THREE.Mesh(

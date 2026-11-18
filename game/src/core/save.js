@@ -9,7 +9,8 @@
 //
 // Format versions (field `v`):
 //   1 - original format (no playSeconds, rep/chapter may be missing on early saves)
-//   2 - current: adds top-level playSeconds and guarantees every metadata field is present
+//   2 - current: adds top-level playSeconds and guarantees every metadata field is present;
+//       an optional `side` block (races, jobs, SEA GLASS shards) is filled with defaults when absent
 // Older records are migrated in memory on read (migrate()), so the menus always see a complete
 // record; the stored copy is upgraded the next time that slot is saved. Records from a newer,
 // unknown version or that fail validation are treated as empty rather than crashing the game.
@@ -27,6 +28,7 @@ import { sky } from '../world/daylight.js';
 import { city, districtAt } from '../world/city.js';
 import { repFromStory } from '../gameplay/progression.js';
 import { MISSIONS } from '../data/missions-data.js';
+import { normalizeSide } from '../data/activities-data.js';
 
 export const SAVE_VERSION = 2;
 
@@ -88,6 +90,8 @@ function migrate(raw) {
   if (typeof d.place !== 'string') d.place = '';
   if (v < 2) d.playSeconds = num(d.stats.playSeconds, 0);
   d.playSeconds = num(d.playSeconds, num(d.stats.playSeconds, 0));
+  // Side progress (races, jobs, SEA GLASS) is an optional block: missing on older v2 saves.
+  d.side = normalizeSide(d.side);
   d.v = SAVE_VERSION;
   return d;
 }
@@ -105,6 +109,7 @@ export function saveGame(slot = game.slot) {
     hour: sky.hour, x: player.x, z: player.z,
     pct: completion(), place: districtAt(player.x, player.z).name,
     playSeconds: game.stats.playSeconds || 0,
+    side: game.side,
   };
   storageSet(SAVE_KEY + slot, JSON.stringify(data));
   game.slot = slot;
@@ -138,7 +143,7 @@ export function loadGame(slot) {
     weapons: { ...game.weapons, ...d.weapons }, ammo: { ...game.ammo, ...d.ammo }, clip: { ...game.clip, ...d.clip },
     rep: d.rep,
     weapon: d.weapon || 0, missionsDone: [...d.missionsDone], stats: { ...game.stats, ...d.stats }, skills: { ...game.skills, ...d.skills },
-    radioStation: d.radioStation || 0, slot,
+    radioStation: d.radioStation || 0, slot, side: normalizeSide(d.side),
   });
   if (!game.stats.playSeconds && d.playSeconds) game.stats.playSeconds = d.playSeconds;
   sky.hour = num(d.hour, 11);

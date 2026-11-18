@@ -14,11 +14,14 @@ import { game, completion } from '../core/state.js';
 import { sky } from '../world/daylight.js';
 import { blip, uiClick, uiHover } from '../audio/radio.js';
 import { repLevel } from '../gameplay/progression.js';
+import { activityPins, foundShells } from '../gameplay/activities.js';
+import { RACES, fmtTime } from '../gameplay/races.js';
 
 let root, actions = {}, titleSel = 0, pauseTab = 'map', pauseSel = 0, titleItems = [];
 const KEYS = [
   ['W A S D', 'Walk / drive'], ['MOUSE', 'Aim  ·  click to shoot'], ['SHIFT', 'Sprint  ·  handbrake drift'],
   ['F', 'Enter / steal car'], ['E', 'Talk  ·  next radio station'], ['TAB', 'Switch weapon'],
+  ['G', 'Races · taxi · parcels · garage · gun counter'], ['1-4', 'Buy in a shop menu'],
   ['M', 'City map + save'], ['ESC', 'Pause menu'],
 ];
 
@@ -149,7 +152,9 @@ function pauseBody() {
         <div class="card panel legend"><h3>LEGEND</h3>
           <div><span style="background:#ffd23f;border-radius:50% 50% 50% 0"></span>Next job (1-9)</div><div><span style="background:#ff4fa3"></span>Route + objective</div><div><span style="background:#ffffff;border-radius:50%"></span>You</div>
           <div><span style="background:#2a6aff"></span>Police</div><div><span style="background:#ff2a2a"></span>Gang</div><div><span style="background:#2ee6c8"></span>Safehouse</div>
-          <div><span style="background:#fff"></span>Landmark</div><div><span style="background:#ffe2a0"></span>Beach</div><div><span style="background:#c08a55"></span>Pier + yacht</div></div>
+          <div><span style="background:#fff"></span>Landmark</div><div><span style="background:#ffe2a0"></span>Beach</div><div><span style="background:#c08a55"></span>Pier + yacht</div>
+          <div><span class="act" style="background:#3fe8ff"></span>Street race (R)</div><div><span class="act" style="background:#ffd23f"></span>Cab stand (T)</div><div><span class="act" style="background:#5dff6a"></span>Parcel depot (D)</div>
+          <div><span class="act" style="background:#3fa0ff"></span>Garage (P)</div><div><span class="act" style="background:#ff5f3f"></span>Gun counter (A)</div><div><span class="act" style="background:#5ffff0"></span>Sea glass ${game.side.shells.length}/30</div></div>
         <div class="card panel slotcard"><div class="slotinfo"><h3>SAVE SLOT ${game.slot + 1}</h3><div class="pct">${pct}% <span style="font-size:16px;color:#fff">COMPLETE</span></div>
           <div class="meta">CH ${(ms.def || nextMission() || { chapter: 7 }).chapter} ${CHAPTER_NAMES[(ms.def || nextMission() || { chapter: 7 }).chapter]}  ·  ${Math.floor(game.stats.playSeconds / 3600)}h ${String(Math.floor(game.stats.playSeconds / 60) % 60).padStart(2, '0')}m played</div>
           <div class="bar pbar"><i style="width:${pct}%"></i></div>
@@ -169,7 +174,13 @@ function pauseBody() {
     const rows = [['CARS STOLEN', s.stolen], ['HEADSHOTS', s.headshots], ['TAKEDOWNS', s.kills], ['ACCURACY', s.shots ? Math.round((s.hits / s.shots) * 100) + '%' : '-'],
       ['DISTANCE', (s.distance / 1000).toFixed(1) + ' km'], ['MAX STARS', s.maxStars], ['TIMES CUFFED', s.cuffed], ['HOSPITAL VISITS', s.downed],
       ['STORY', `${done}/9`], ['COMPLETION', completion() + '%'], ['CASH', '$' + game.cash.toLocaleString()], ['PLAY TIME', Math.floor(s.playSeconds / 60) + ' min']];
-    return `<div class="stats">${rows.map(([k, v]) => `<div class="card panel"><h3>${k}</h3><div>${v}</div></div>`).join('')}</div>`;
+    const sd = game.side;
+    const medal = (id) => ({ gold: '#ffd23f', silver: '#e0e8ff', bronze: '#ff9a5c' }[sd.raceMedal[id]] || '#9a8ab0');
+    const races = RACES.map((r) => `<span style="color:${medal(r.id)}">${sd.raceBest[r.id] ? fmtTime(sd.raceBest[r.id]) : '--'}</span>`).join(' · ');
+    rows.push(['SEA GLASS', `${sd.shells.length}/30`], ['RACE BESTS', races], ['RACES RUN', sd.races], ['TAXI FARES', sd.fares],
+      ['PARCELS', `${sd.parcels} (${sd.runs} runs)`], ['GARAGE', `${sd.resprays} sprays · ${sd.upgrades} mods`], ['SIDE EARNINGS', '$' + sd.earned.toLocaleString()], ['SPENT IN SHOPS', '$' + sd.spent.toLocaleString()]);
+    const fit = (v) => { const n = String(v).replace(/<[^>]+>/g, '').length; return n > 22 ? ' style="font-size:16px"' : n > 12 ? ' style="font-size:21px"' : ''; };
+    return `<div class="stats">${rows.map(([k, v]) => `<div class="card panel"><h3>${k}</h3><div${fit(v)}>${v}</div></div>`).join('')}</div>`;
   }
   if (pauseTab === 'save') {
     return `<div class="slots">${listSlots().map((s) => `<div class="card panel"><h3>SLOT ${s.slot + 1}${s.slot === game.slot ? '  (CURRENT)' : ''}</h3>
@@ -234,6 +245,14 @@ function drawPauseMap(cv) {
     g.fillStyle = '#12061c'; g.font = 'bold 13px Arial Black, sans-serif'; g.textAlign = 'center'; g.fillText(ch, p.x, p.y + 5);
   };
   pin(P(city.landmarks.safehouse.x, city.landmarks.safehouse.z), '#2ee6c8', 'H');
+  // Side activities (round pins) and the SEA GLASS shards already found.
+  for (const a of activityPins()) {
+    const p = P(a.x, a.z);
+    g.beginPath(); g.arc(p.x, p.y, 10, 0, Math.PI * 2); g.fillStyle = '#12061c'; g.fill();
+    g.beginPath(); g.arc(p.x, p.y, 8, 0, Math.PI * 2); g.fillStyle = a.color; g.fill();
+    g.fillStyle = '#12061c'; g.font = 'bold 11px Arial Black, sans-serif'; g.textAlign = 'center'; g.fillText(a.ch, p.x, p.y + 4);
+  }
+  for (const s of foundShells()) { const p = P(s.x, s.z); g.fillStyle = '#12061c'; g.fillRect(p.x - 4, p.y - 4, 8, 8); g.fillStyle = '#5ffff0'; g.fillRect(p.x - 2.5, p.y - 2.5, 5, 5); }
   // GPS route to the current job: along the road grid from the player to the target.
   const cur = ms.def || nextMission();
   const goal = ms.goal || (cur && city.landmarks[cur.start]);

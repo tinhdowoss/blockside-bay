@@ -72,4 +72,13 @@ export function setupAudioEvents() {
   on('missionPassed', () => S.jingle(true));
   on('banner', (b) => { if (b.top === 'MISSION FAILED') S.jingle(false); });
   on('weapon', () => S.blip(520));
+  // Side activities
+  on('checkpoint', (e) => S.checkpointSfx(e?.last));
+  on('countdown', (n) => S.blip(n > 0 ? 660 : 1320));
+  on('activityDone', () => S.jingle(true));
+  on('purchase', () => S.coin());
+  on('denied', () => S.dryFire());
+  on('uiOpen', () => S.uiClick());
+  on('door', () => S.door(true));
+  on('shell', (e) => { S.checkpointSfx(true); if (e?.all) S.jingle(true); });
 }
