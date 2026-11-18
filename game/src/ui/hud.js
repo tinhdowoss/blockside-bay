@@ -9,7 +9,10 @@ import { police, responseReport, STATE_COLORS } from '../gameplay/police.js';
 import { objectiveInfo } from '../gameplay/missions.js';
 import { repLevel } from '../gameplay/progression.js';
 import { sky } from '../world/daylight.js';
-import { districtAt } from '../world/city.js';
+import { setupLocation, updateLocation } from './location.js';
+import { setupTips, updateTips } from './tips.js';
+import { gpsTarget } from './minimap.js';
+import { gpsRoute, routeLength } from './gps.js';
 import { isReloading } from '../gameplay/combat.js';
 import { radioInfo } from '../audio/radio.js';
 import { resultsOpen } from './results.js';
@@ -93,6 +96,9 @@ export function setupHud(cam) {
   on('banner', (b) => { banner = { ...b, t: 4 }; });
   on('toast', (t) => { toast = { ...t, t: 2.6 }; });
   on('hurt', () => { els.hurt.style.opacity = 1; });
+  on('stageClear', ({ def, stage }) => { toast = { text: `✓ STAGE ${stage + 1}/${def.stages.length} CLEAR`, color: '#7cff6b', t: 2.2 }; });
+  setupLocation(root);
+  setupTips(root);
   shownCash = game.cash;
 }
 
@@ -134,6 +140,8 @@ function updateMission() {
   if (m.timer != null) meta.push(`${mmss(m.timer)} LEFT`);
   if (m.count) meta.push(`${m.count} DOWN`);
   if (m.extra) meta.push(m.extra);
+  const tg = gpsTarget();
+  if (tg && !m.idle) { const d = routeLength(gpsRoute(player.x, player.z, tg.x, tg.z)); if (d > 12) meta.push(`GPS ${d > 950 ? (d / 1000).toFixed(1) + ' KM' : Math.round(d / 10) * 10 + ' M'}`); }
   const metaEl = mp.querySelector('.m-meta');
   metaEl.style.display = m.idle ? 'none' : 'flex';
   mp.querySelector('.m-count').textContent = meta.join('  ·  ') || 'IN PROGRESS';
@@ -225,9 +233,8 @@ export function updateHud(dt, now = performance.now() / 1000) {
   els.hp.querySelector('i').style.width = `${Math.max(0, game.health)}%`;
   els.ar.querySelector('i').style.width = `${Math.max(0, game.armor)}%`;
 
-  const d = districtAt(player.x, player.z);
-  els.district.textContent = d.name;
-  els.district.style.color = d.color;
+  updateLocation(dt);
+  updateTips(dt);
 
   const v = player.vehicle;
   updateSpeedo(v, now);

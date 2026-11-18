@@ -5,7 +5,8 @@ import { drawBlockyTitle, drawPixelText, textWidth } from './pixelfont.js';
 import { CAST, CREW, portraitURL } from '../data/cast.js';
 import { MISSIONS, CHAPTER_NAMES, STORY_HOOK } from '../data/missions-data.js';
 import { cityMapImage, toMap } from './minimap.js';
-import { city, nearestNode, nodePos } from '../world/city.js';
+import { city } from '../world/city.js';
+import { gpsRoute } from './gps.js';
 import { player } from '../gameplay/player.js';
 import { police } from '../gameplay/police.js';
 import { ms, nextMission } from '../gameplay/missions.js';
@@ -257,9 +258,7 @@ function drawPauseMap(cv) {
   const cur = ms.def || nextMission();
   const goal = ms.goal || (cur && city.landmarks[cur.start]);
   if (goal) {
-    const a = nearestNode(player.x, player.z), b = nearestNode(goal.x, goal.z);
-    const pa = nodePos(a.i, a.j), pb = nodePos(b.i, b.j);
-    const pts = [P(player.x, player.z), P(pa.x, pa.z), P(pb.x, pa.z), P(pb.x, pb.z), P(goal.x, goal.z)];
+    const pts = gpsRoute(player.x, player.z, goal.x, goal.z).map((q) => P(q.x, q.z));
     g.lineJoin = 'round';
     for (const [w, c] of [[9, '#12061c'], [5, '#ff4fa3']]) {
       g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));

@@ -77,7 +77,25 @@
 /* Bottom-left: minimap + health/armor */
 #mapwrap { position: absolute; left: 22px; bottom: 18px; width: 214px; }
 #minimap { width: 214px; height: 214px; border-radius: 50%; border: 5px solid var(--ink); box-shadow: 0 0 0 3px #fff, 0 6px 0 rgba(0,0,0,0.35); display: block; background: #1fb6d6; }
-#district { position: absolute; left: -10px; right: -10px; top: -30px; text-align: center; font-size: 17px; color: #fff; }
+#district { position: absolute; left: -16px; right: -16px; top: -48px; text-align: center; font-size: 17px; color: #fff; line-height: 1.05; }
+#district b { display: block; font-weight: normal; }
+#district small { display: block; font-size: 12px; letter-spacing: 1px; color: #fff; white-space: nowrap; }
+/* NOW ENTERING card (ui/location.js) */
+#loccard { position: absolute; right: 24px; bottom: 178px; text-align: right; padding: 6px 14px 7px; background: rgba(18, 6, 28, 0.82); border: 3px solid var(--ink); border-left: 8px solid #fff;
+  transform: translateX(120%); opacity: 0; transition: transform 0.4s cubic-bezier(.2,1.2,.4,1), opacity 0.3s; }
+#loccard.show { transform: none; opacity: 1; }
+#loccard small { display: block; font-size: 11px; letter-spacing: 3px; color: #ffe9a8; }
+#loccard b { display: block; font-size: 28px; font-weight: normal; line-height: 1.05; }
+#loccard em { display: block; font-style: normal; font-size: 13px; letter-spacing: 1px; }
+/* First-play TIP banner (ui/tips.js) */
+#tipbanner { position: absolute; left: 50%; bottom: 158px; max-width: 640px; width: max-content; display: flex; gap: 10px; align-items: center; padding: 7px 14px; font-size: 16px;
+  background: rgba(18, 6, 28, 0.85); border: 3px solid var(--ink); box-shadow: 0 0 0 2px #fff, 4px 4px 0 rgba(0,0,0,0.35);
+  transform: translate(-50%, 14px); opacity: 0; transition: transform 0.3s, opacity 0.3s; }
+#tipbanner.show { transform: translate(-50%, 0); opacity: 1; }
+#tipbanner .tag { flex: none; background: var(--teal); color: var(--ink); text-shadow: none; padding: 1px 8px; font-weight: normal; }
+#tipbanner span { font-family: "Trebuchet MS", sans-serif; font-weight: bold; line-height: 1.5; }
+#tipbanner .kc { display: inline-block; padding: 0 6px; background: #fff; color: var(--ink); border: 2px solid var(--ink); box-shadow: 0 2px 0 var(--ink); font-family: var(--font); font-size: 12px; text-shadow: none; }
+#hud.act-on #tipbanner { bottom: 206px; }
 .bar { height: 14px; margin-top: 8px; background: #2a1840; border: 3px solid var(--ink); position: relative; }
 .bar i { position: absolute; left: 0; top: 0; bottom: 0; }
 #hp i { background: linear-gradient(#7cff8a, #22c94a); }

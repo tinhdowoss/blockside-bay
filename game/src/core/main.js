@@ -34,6 +34,7 @@ import { buildClouds, updateClouds } from '../world/clouds.js';
 import { setupCarLights, updateCarLights } from '../fx/carlights.js';
 import { setupActivities, updateActivities, updateActivityHud, defaultSide, abortActivity } from '../gameplay/activities.js';
 import { setupResults, updateResults, resultsKey, dismissResults } from '../ui/results.js';
+import { resetLocation } from '../ui/location.js';
 
 const THREE = window.THREE;
 const params = new URLSearchParams(location.search);
@@ -41,6 +42,7 @@ const SHOT = params.get('shot');
 setSeed(Number(params.get('seed') || 1));
 // Screenshot mode: CSS blink animations sit still so captures are repeatable.
 if (SHOT) document.body.classList.add('shot');
+game.shot = SHOT;
 
 // ---- Renderer + world -------------------------------------------------------------------
 const canvas = document.getElementById('view');
@@ -125,7 +127,7 @@ export function enterTitle() {
 function resetRun() {
   Object.assign(game, {
     cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false },
-    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], missionBest: {}, activeMission: null, side: defaultSide(), sideBusy: false,
+    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], missionBest: {}, tipsSeen: [], activeMission: null, side: defaultSide(), sideBusy: false,
     stats: { stolen: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, maxStars: 0, cuffed: 0, downed: 0, playSeconds: 0, stunts: 0 },
     skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   });
@@ -137,6 +139,7 @@ function startPlaying(x, z) {
   if (player.vehicle) exitVehicle();
   clearWanted();
   placePlayer(x, z, 0);
+  resetLocation();
   game.mode = 'play';
   showHud(true);
   input.wantLock = true;
@@ -151,6 +154,7 @@ function newGame() {
   setHour(10.5);
   const s = city.landmarks.safehouse;
   startPlaying(s.x - 7, s.z);
+  emit('playStart', true);
   say('kai', 'Blockside Bay. Six years and the sun still hits like a bat.');
   say('mari', "Kai! It's Mari. Come by the yellow marker outside your place - I've got work.");
 }
@@ -160,6 +164,7 @@ function continueGame(slot) {
   resetRun();
   const pos = loadGame(slot.slot);
   startPlaying(pos.x, pos.z);
+  emit('playStart', false);
   emit('toast', { text: `WELCOME BACK  ·  SLOT ${slot.slot + 1}`, color: '#ffd23f' });
 }
 

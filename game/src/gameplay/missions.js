@@ -45,6 +45,7 @@ export function startMission(def, stage = 0) {
   emit('missionStart', def);
   emit('banner', { top: `CHAPTER ${def.chapter}  ·  MISSION START`, title: def.title, color: '#ffd23f' });
   enterStage(stage);
+  emit('objective');
 }
 
 // ENTER on the failed card (or a play-test): back to the mission's start marker and go again.

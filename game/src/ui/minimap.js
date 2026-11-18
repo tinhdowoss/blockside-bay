@@ -1,4 +1,5 @@
-// Round, camera-rotated minimap and the shared top-down city map image (also used by the pause MAP tab).
+// Round, camera-rotated minimap with the GPS route, and the shared top-down city map image (also used by
+// the pause MAP tab).
 import { CELL, GRID_N, CITY_SIZE, OCEAN_X, ROAD_W } from '../core/config.js';
 import { city, PIER_Z, PIER_LEN } from '../world/city.js';
 import { player } from '../gameplay/player.js';
@@ -7,6 +8,8 @@ import { shooters } from '../gameplay/combat.js';
 import { missionGoal, ms, nextMission } from '../gameplay/missions.js';
 import { vehicles } from '../gameplay/vehicles.js';
 import { activityPins, activityTarget, nearShells } from '../gameplay/activities.js';
+import { gpsRoute } from './gps.js';
+import { game } from '../core/state.js';
 
 const PX = 2;                 // map pixels per world unit
 const ORIGIN = { x: -60, z: -60 };
@@ -63,6 +66,38 @@ function dot(g, x, y, r, fill, stroke = '#12061c') {
   g.lineWidth = 2; g.strokeStyle = stroke; g.stroke();
 }
 
+// What the GPS is pointing at: a running race / fare / parcel target first, else the story objective
+// (pink) or the next job's start marker (yellow). Null when there is nothing to route to.
+export function gpsTarget() {
+  const at = game.sideBusy ? activityTarget() : null;
+  if (at) return { x: at.x, z: at.z, color: '#5dff6a' };
+  const goal = missionGoal();
+  if (goal) return { x: goal.x, z: goal.z, color: ms.def ? '#ff4fa3' : '#ffd23f' };
+  return null;
+}
+
+// GPS line along the streets, drawn under every marker; dashes crawl towards the target.
+function drawRoute(g, C, zoom, rot, t) {
+  const tg = gpsTarget();
+  if (!tg || Math.hypot(tg.x - player.x, tg.z - player.z) < 10) return;
+  const pts = gpsRoute(player.x, player.z, tg.x, tg.z);
+  const c = Math.cos(rot), s = Math.sin(rot);
+  g.save();
+  g.beginPath(); g.arc(C, C, C - 2, 0, Math.PI * 2); g.clip();
+  g.beginPath();
+  pts.forEach((p, i) => {
+    const dx = (p.x - player.x) * PX * zoom, dz = (p.z - player.z) * PX * zoom;
+    const x = C + dx * c - dz * s, y = C + dx * s + dz * c;
+    if (i) g.lineTo(x, y); else g.moveTo(x, y);
+  });
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  g.strokeStyle = '#12061c'; g.lineWidth = 9; g.stroke();
+  g.strokeStyle = tg.color; g.lineWidth = 5; g.stroke();
+  g.setLineDash([6, 10]); g.lineDashOffset = -t * 30;
+  g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 2; g.stroke();
+  g.restore();
+}
+
 export function drawMinimap(t) {
   const g = ctx, S = canvasEl.width, C = S / 2;
   const fast = player.vehicle ? Math.min(1, player.vehicle.speed / 40) : 0;
@@ -90,6 +125,7 @@ export function drawMinimap(t) {
     return { x: C + px, y: C + py, edge };
   };
   const blink = Math.floor(t * 4) % 2;
+  drawRoute(g, C, zoom, rot, t);
   for (const v of vehicles) {
     if (!v.police || v.driver !== 'police' && !v.siren) continue;
     const p = proj(v.x, v.z);

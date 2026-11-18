@@ -110,7 +110,7 @@ export function saveGame(slot = game.slot) {
     hour: sky.hour, x: player.x, z: player.z,
     pct: completion(), place: districtAt(player.x, player.z).name,
     playSeconds: game.stats.playSeconds || 0,
-    side: game.side, missionBest: game.missionBest || {},
+    side: game.side, missionBest: game.missionBest || {}, tipsSeen: game.tipsSeen || [],
   };
   storageSet(SAVE_KEY + slot, JSON.stringify(data));
   game.slot = slot;
@@ -145,6 +145,8 @@ export function loadGame(slot) {
     rep: d.rep,
     weapon: d.weapon || 0, missionsDone: [...d.missionsDone], stats: { ...game.stats, ...d.stats }, skills: { ...game.skills, ...d.skills },
     radioStation: d.radioStation || 0, slot, side: normalizeSide(d.side), missionBest: { ...obj(d.missionBest) },
+    // Saves from before the tutorial count as experienced players: no tips.
+    tipsSeen: Array.isArray(d.tipsSeen) ? d.tipsSeen.filter((s) => typeof s === 'string') : ['move', 'marker', 'gps', 'steal', 'drive', 'wanted', 'fight', 'map'],
   });
   if (!game.stats.playSeconds && d.playSeconds) game.stats.playSeconds = d.playSeconds;
   sky.hour = num(d.hour, 11);
