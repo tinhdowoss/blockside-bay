@@ -19,7 +19,11 @@ BLOCKSIDE BAY is an original voxel open-world crime game that runs in the browse
 - Street reputation: XP from missions, takedowns, carjacks and escapes raises your REP level and title
 - 9 story missions with dialogue: steal, deliver, eliminate, pick up, timed escapes and boss fights. The mission panel shows the stage, the objective, what comes next and a tip; the map shows numbered story pins and a route
 - A day/night cycle with golden-hour haze and a bloom post pass (neon, light bars and muzzle flashes glow), tyre smoke, skid marks, speed streaks and speed-based camera FOV and shake, a rotating minimap, and a pause menu with Map, Missions, Stats, Save and Settings tabs
-- Three procedural WebAudio radio stations (synthwave, bay house, tropical brass)
+- In-game graphics: filmic tone curve, exposure, a time-of-day colour grade and vignette, soft distance haze, a gradient sky with sun disc, moon and drifting voxel clouds, texel-snapped soft shadows, and a shader sea with rolling swells, sun glitter and shoreline foam
+- Landmarks of its own: the HALCYON SPAN suspension bridge with its own traffic, the CORAL WHEEL Ferris wheel by the pier, MANGROVE MARINA with bobbing boats, and the POINT GLASS lighthouse whose beam sweeps the bay at night
+- Street life: shopfronts with invented names and striped awnings, rooftop billboards, benches, bins, hydrants, mailboxes, BAYLINK bus shelters and working traffic signals that civilian cars stop for; headlights, tail lights and police strobes at night; tall beams over mission markers
+- Side activities (press **G**): three street races with checkpoints, a countdown and bronze/silver/gold times; PALOMAR CAB taxi fares with tips and streaks; BAYLINK PARCEL delivery runs; PAINT & PISTON garages (repair, respray that sheds a star if the police can't see you, engine and grip upgrades); LEAD & LIME gun counters (ammo, early SMG and scatter gun with enough rep, body armor); 30 hidden SEA GLASS shards. All of them show on the minimap and the pause map legend, pay cash and rep, and are counted in STATS and saved
+- Procedural WebAudio: a mixer with compressor, limiter and reverb/delay sends; four radio stations (synthwave, bay house, tropical brass, lo-fi keys) with drums, bass, chords and lead/arpeggio; an engine that shifts through five gears and responds to the throttle; tyre screech; police sirens with distance, stereo pan and doppler; surf, city hum, gulls by day and crickets at night; UI clicks and hovers. All of it follows the volume settings
 - Skills that improve as you play (driving, shooting, stamina, stealth) and 3 save slots stored in localStorage
 
 **Controls**
@@ -29,6 +33,7 @@ BLOCKSIDE BAY is an original voxel open-world crime game that runs in the browse
 - **Shift**: sprint on foot, handbrake in a car (Space also works as handbrake)
 - **F**: enter, exit or steal a vehicle
 - **E**: talk to a nearby pedestrian on foot, change radio station in a car
+- **G**: start a race, go on taxi duty, take a parcel run, or open a garage / gun counter. **1-4** buy in those menus
 - **Tab** (or Q): cycle weapons. **1-4**: pick a weapon. **R**: reload
 - **M**: map and save menu
 - **Esc**: pause
@@ -38,12 +43,12 @@ BLOCKSIDE BAY is an original voxel open-world crime game that runs in the browse
 `game/src` is split by job:
 
 - `core/`: boot and main loop, config, seeded RNG, shared state, input, save slots, settings
-- `world/`: city builder, daylight, textures, voxel batching, models, traffic, pedestrians
-- `gameplay/`: player, camera, vehicles, carjacking, police, combat, missions, progression
-- `data/`: story missions and the cast
+- `world/`: city builder, daylight and sky, clouds, water, landmarks, storefronts, street furniture and signals, activity sites, textures, voxel batching, models, traffic, pedestrians
+- `gameplay/`: player, camera, vehicles, carjacking, police, combat, missions, progression, side activities (races, jobs, shops, collectibles)
+- `data/`: story missions, the cast, side-activity data
 - `ui/`: HUD, minimap, menus, dialogue, pixel font
-- `audio/`: procedural radio and sound effects
-- `fx/`: particles, smoke, skid marks, post-processing, colour grade
+- `audio/`: mixer, radio stations, sound effects, ambience
+- `fx/`: particles, smoke, skid marks, car lights, post-processing, colour grade
 - `dev/`: deterministic screenshot scenes (`?shot=chase|title|combat|map&seed=1`)
 
 ## Run it

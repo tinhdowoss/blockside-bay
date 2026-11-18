@@ -29,9 +29,9 @@ export const SITES = [
   { id: 'garage1', kind: 'garage', name: 'PAINT & PISTON', x: 3 * CELL + 3, z: 4 * CELL + 24, nx: 1, nz: 0, color: '#3fa0ff', ch: 'P' },
   { id: 'garage2', kind: 'garage', name: 'PAINT & PISTON', x: 6 * CELL + 24, z: 6 * CELL + 3, nx: 0, nz: 1, color: '#3fa0ff', ch: 'P' },
   { id: 'gun1', kind: 'gunshop', name: 'LEAD & LIME', x: 4 * CELL + 14, z: 3 * CELL - H - 1.5, nx: 0, nz: -1, color: '#ff5f3f', ch: 'A' },
-  { id: 'gun2', kind: 'gunshop', name: 'LEAD & LIME', x: 2 * CELL - H - 1.5, z: 5 * CELL + 30, nx: -1, nz: 0, color: '#ff5f3f', ch: 'A' },
+  { id: 'gun2', kind: 'gunshop', name: 'LEAD & LIME', x: 2 * CELL - H - 1.5, z: 6 * CELL + 20, nx: -1, nz: 0, color: '#ff5f3f', ch: 'A' },
   { id: 'depot', kind: 'courier', name: 'BAYLINK PARCEL', x: 2 * CELL + 14, z: 7 * CELL - 3, nx: 0, nz: -1, color: '#5dff6a', ch: 'D' },
-  { id: 'cabs', kind: 'cabstand', name: 'PALOMAR CAB CO.', x: 5 * CELL + 3, z: 3 * CELL + 24, nx: 1, nz: 0, color: '#ffd23f', ch: 'T' },
+  { id: 'cabs', kind: 'cabstand', name: 'PALOMAR CAB CO.', x: 6 * CELL - 3, z: 4 * CELL + 30, nx: -1, nz: 0, color: '#ffd23f', ch: 'T' },
 ];
 
 export const SHOP = [
