@@ -85,6 +85,15 @@ export function stinger(up = true) {
 export function blip(f = 660) { if (mix.ac) tone('square', f, mix.ac.currentTime, 0.07, 0.06, { bus: mix.ui, filter: 3500 }); }
 export function uiClick() { if (mix.ac) { const t = mix.ac.currentTime; tone('square', 880, t, 0.05, 0.05, { bus: mix.ui, filter: 3000 }); tone('sine', 1320, t + 0.03, 0.06, 0.04, { bus: mix.ui }); } }
 export function uiHover() { if (mix.ac) tone('sine', 1500, mix.ac.currentTime, 0.04, 0.025, { bus: mix.ui }); }
+// Menu open (rising) / close (falling) swoosh: a filtered noise sweep with a soft tone under it.
+export function uiSwoosh(open = true) {
+  if (!mix.ac) return;
+  const t = mix.ac.currentTime;
+  noise(t, 0.16, 0.18, open ? 1400 : 2600, { ftype: 'bandpass', q: 1.5, bus: mix.ui });
+  tone('triangle', open ? 440 : 660, t, 0.16, 0.05, { bus: mix.ui, glide: open ? 660 : 440, rev: 0.2 });
+}
+// Settings slider tick: pitch follows the value (0..1).
+export function uiTick(v = 0.5) { if (mix.ac) tone('square', 440 + v * 660, mix.ac.currentTime, 0.05, 0.05, { bus: mix.ui, filter: 3000 }); }
 export function jingle(ok = true) {
   if (!mix.ac) return;
   const t = mix.ac.currentTime, notes = ok ? [72, 76, 79, 84] : [67, 63, 60];

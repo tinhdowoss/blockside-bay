@@ -31,7 +31,7 @@ export function updatePlayer(dt) {
   // Mouse look (both modes)
   const sens = game.sens ?? 1;
   player.camYaw -= input.mouseDX * 0.0025 * sens;
-  player.camPitch = Math.max(-0.35, Math.min(0.9, player.camPitch + input.mouseDY * 0.002 * sens));
+  player.camPitch = Math.max(-0.35, Math.min(0.9, player.camPitch + input.mouseDY * 0.002 * sens * (game.invertY ? -1 : 1)));
   if (player.vehicle) {
     driveControls(player.vehicle);
     player.x = player.vehicle.x; player.z = player.vehicle.z;
@@ -62,7 +62,7 @@ export function updatePlayer(dt) {
     const dx = player.x - v.x, dz = player.z - v.z, d = Math.hypot(dx, dz), m = v.spec.len * 0.45;
     if (d < m && d > 0.01) { player.x = v.x + (dx / d) * m; player.z = v.z + (dz / d) * m; }
   }
-  game.stats.distance += player.speed * dt;
+  game.stats.walked = (game.stats.walked || 0) + player.speed * dt;
   // Facing: aim direction while armed or shooting, else movement direction.
   player.aiming = game.weapon > 0 || input.fire;
   const targetYaw = player.aiming ? player.camYaw : (spd ? Math.atan2(mx, mz) : player.yaw);

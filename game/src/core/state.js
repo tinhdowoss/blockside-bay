@@ -13,7 +13,9 @@ export const game = {
   weapon: 1,             // index into WEAPONS
   missionsDone: [],
   activeMission: null,
-  stats: { stolen: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, maxStars: 0, cuffed: 0, downed: 0, playSeconds: 0, stunts: 0 },
+  // Career counters; every key is listed in gameplay/stats.js (STAT_DEFAULTS), which resets them per run.
+  stats: { stolen: 0, copCars: 0, wrecked: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, walked: 0, topSpeed: 0, maxStars: 0, evaded: 0,
+    cuffed: 0, downed: 0, playSeconds: 0, stunts: 0, racesWon: 0, earned: 0, missionFails: 0 },
   skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   radioStation: 0,
   slot: 0,

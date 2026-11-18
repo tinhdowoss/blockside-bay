@@ -8,8 +8,8 @@
 #title .logo { position: absolute; left: 30px; top: 14px; width: 540px; image-rendering: pixelated; filter: drop-shadow(0 0 18px rgba(255, 120, 80, 0.55)); }
 #title .tagline { position: absolute; left: 44px; top: 204px; font-size: 18px; color: #ffe9a8; letter-spacing: 3px; }
 #title .hook { position: absolute; left: 44px; top: 232px; width: 720px; font-family: "Trebuchet MS", sans-serif; font-weight: bold; font-style: italic; font-size: 18px; color: #fff; }
-#title .menu { position: absolute; left: 44px; top: 264px; display: flex; flex-direction: column; gap: 4px; width: 470px; }
-#title .menu .btn { font-size: 19px; line-height: 1.1; padding: 3px 14px 4px; color: #fff; background: rgba(18, 6, 28, 0.6); border: 3px solid transparent; letter-spacing: 1px; }
+#title .menu { position: absolute; left: 44px; top: 262px; display: flex; flex-direction: column; gap: 3px; width: 470px; }
+#title .menu .btn { font-size: 18px; line-height: 1.05; padding: 2px 14px 3px; color: #fff; background: rgba(18, 6, 28, 0.6); border: 3px solid transparent; letter-spacing: 1px; }
 #title .menu .btn small { display: block; font-size: 12px; line-height: 1.2; color: #ffe9a8; font-family: "Trebuchet MS", sans-serif; font-weight: bold; letter-spacing: 0; white-space: nowrap; }
 #title .menu .btn.sel { background: linear-gradient(90deg, #ffd23f, #ff8fc8); color: #12061c; border-color: #12061c; box-shadow: 0 0 0 3px #fff, 6px 6px 0 rgba(0,0,0,0.35); text-shadow: none; }
 #title .menu .btn.sel small { color: #4a1838; }
@@ -30,8 +30,8 @@
 /* Pause */
 #pause { position: absolute; inset: 0; background: rgba(20, 6, 34, 0.9); }
 #pause .top { position: absolute; left: 0; right: 0; top: 0; height: 58px; display: flex; align-items: center; gap: 8px; padding: 0 22px; background: linear-gradient(90deg, #ff4fa3, #7a5cff); border-bottom: 4px solid #12061c; }
-#pause .top .brand { font-size: 22px; margin-right: 18px; color: #ffd23f; }
-#pause .tab { font-size: 18px; padding: 7px 14px; color: #fff; border: 3px solid transparent; }
+#pause .top .brand { font-size: 20px; margin-right: 10px; color: #ffd23f; white-space: nowrap; }
+#pause .tab { font-size: 16px; padding: 7px 10px; color: #fff; border: 3px solid transparent; }
 #pause .tab.sel { background: #ffd23f; color: #12061c; border-color: #12061c; text-shadow: none; }
 #pause .top .info { margin-left: auto; font-size: 18px; text-align: right; }
 #pause .top .info b { color: #5dff6a; font-size: 24px; }
@@ -70,6 +70,75 @@
 #pause .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 #pause .stats .card div { font-size: 30px; color: #5dff6a; }
 #pause .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-#pause .settings .row { display: flex; align-items: center; gap: 12px; font-size: 18px; margin: 12px 0; }
-#pause .settings .row .btn { padding: 2px 12px; background: #fff; color: #12061c; border: 2px solid #12061c; }
 #pause .slotinfo .meta.rep { margin-top: 6px; color: #2ee6c8; }
+#pause .mcard.now { border-color: #ffd23f; box-shadow: 0 0 0 3px #ffd23f inset; }
+#pause .mcard.locked { opacity: 0.7; }
+#pause .mcard .blurb { margin: 6px 0; }
+#pause .mcard .meta { font-size: 12px; margin-top: 3px; }
+#pause .mcard .meta.dim { color: #b8b0c8; }
+#pause .pfoot { position: absolute; right: 22px; bottom: 2px; font-size: 11px; color: #ffe9a8; }
+#pause .pfoot .kc { min-width: 0; padding: 0 5px; font-size: 10px; }
+#pause .pagecard { max-width: 1040px; margin: 0 auto; padding: 14px 18px; }
+#pause .pagecard.narrow { max-width: 620px; }
+
+/* STATS page */
+#pause .statgrid { display: grid; grid-template-columns: 1fr 1fr 1fr 1.25fr; gap: 12px; align-items: start; }
+#pause .ssec { padding: 10px 14px; }
+#pause .srow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; border-top: 2px solid rgba(255,255,255,0.1); }
+#pause .srow span { font-size: 13px; color: #d8d0e8; }
+#pause .srow b { font-size: 22px; font-weight: normal; color: #5dff6a; white-space: nowrap; }
+#pause .srow b.sm { font-size: 16px; }
+
+/* SETTINGS page (title + pause) */
+.settings h3 { color: #ffd23f; }
+.settings .sgroup { margin: 10px 0 2px; font-size: 11px; letter-spacing: 3px; color: #2ee6c8; }
+.settings .row { display: flex; align-items: center; gap: 8px; padding: 3px 6px; font-size: 15px; border: 2px solid transparent; }
+.settings .row.sel { background: rgba(255, 210, 63, 0.14); border-color: #ffd23f; }
+.settings .row .lbl { flex: 1; white-space: nowrap; }
+.settings .row b { width: 34px; text-align: right; font-weight: normal; }
+.settings .step { padding: 0 7px; background: #fff; color: #12061c; border: 2px solid #12061c; font-size: 11px; line-height: 18px; text-shadow: none; }
+.settings .step:hover, .settings .reset:hover { background: #ffd23f; }
+.settings .sbar { position: relative; width: 150px; height: 12px; background: #2a1840; border: 2px solid #12061c; }
+.settings .sbar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ff4fa3, #ffd23f); transition: width 0.15s; }
+.settings .spill { width: 150px; text-align: center; font-size: 13px; padding: 1px 0; background: #3a2a50; border: 2px solid #12061c; color: #b8b0c8; }
+.settings .spill.on { background: #5dff6a; color: #12061c; text-shadow: none; }
+.settings .row.sfoot { margin-top: 10px; justify-content: space-between; border: 0; background: none; }
+.settings .reset { padding: 3px 10px; background: #fff; color: #12061c; border: 2px solid #12061c; font-size: 12px; text-shadow: none; }
+.settings .hint { font-size: 11px; color: #ffe9a8; }
+.settings .hint .kc { min-width: 0; padding: 0 5px; font-size: 10px; }
+
+/* CONTROLS + CREDITS */
+.controls .kcols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+.controls .k { display: flex; align-items: center; gap: 10px; font-size: 13px; margin: 5px 0; font-family: "Trebuchet MS", sans-serif; font-weight: bold; }
+.controls .k .kc { min-width: 74px; font-size: 11px; }
+.controls .howto { margin-top: 12px; font-family: "Trebuchet MS", sans-serif; font-weight: bold; font-size: 14px; line-height: 1.45; }
+.controls .howto .kc { min-width: 0; }
+.credits h3 { margin-top: 12px !important; }
+.credits .cl { font-family: "Trebuchet MS", sans-serif; font-weight: bold; font-size: 14px; line-height: 1.45; }
+.credits .cl.dim { margin-top: 12px; color: #ffe9a8; font-style: italic; }
+.credits .cgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 14px; font-size: 13px; }
+.credits .cgrid b { font-weight: normal; margin-right: 6px; }
+#title .sub.wide { width: 700px; left: 530px; top: 250px; max-height: 420px; overflow: auto; }
+#title .sub.mid { width: 540px; top: 252px; padding: 10px 14px; }
+#title .sub.mid h3 { margin-bottom: 0; }
+#title .sub.mid .settings .row { padding: 0 6px; font-size: 14px; line-height: 22px; }
+#title .sub.mid .settings .row.sfoot { margin-top: 4px; }
+#title .sub.mid .settings .hint { display: none; }
+#title .sub.mid .settings .sgroup { margin: 4px 0 0; font-size: 10px; }
+#title .sub.mid .settings .sbar { height: 10px; }
+#title .sub.mid .settings .spill { font-size: 11px; padding: 0; }
+#title .sub { background: rgba(18, 6, 28, 0.94); }
+#title.subopen .crew, #title.subopen .crewlabel { display: none; }
+#title .sub h3 { color: #ffd23f; }
+
+/* Transitions: the pause menu fades in, every page slides up, title panels pop in. */
+@keyframes bbFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bbRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes bbPop { from { opacity: 0; transform: translateX(-16px) scale(0.97); } to { opacity: 1; transform: none; } }
+#pause.opening { animation: bbFade 0.22s ease-out; }
+#pause.opening .top { animation: bbRise 0.28s ease-out; }
+#pause .body.anim { animation: bbRise 0.26s ease-out; }
+#title .sub.anim { animation: bbPop 0.24s ease-out; }
+#title .menu .btn { transition: background 0.12s, transform 0.12s; }
+#title .menu .btn.sel { transform: translateX(6px); }
+#pause .tab { transition: background 0.12s, color 0.12s; }

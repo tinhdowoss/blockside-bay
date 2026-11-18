@@ -17,14 +17,15 @@ import { setupMissions, updateMissions, failMission, ms } from '../gameplay/miss
 import { setupDialogue, updateDialogue, say, clearDialogue } from '../ui/dialogue.js';
 import { setupHud, updateHud, showHud, showDown } from '../ui/hud.js';
 import { setupMinimap, drawMinimap } from '../ui/minimap.js';
-import { initAudio, updateAudio, setRadioPlaying, nextStation, setupAudioEvents, setVolume } from '../audio/radio.js';
+import { initAudio, updateAudio, setRadioPlaying, nextStation, setupAudioEvents } from '../audio/radio.js';
+import { setupStats, updateStats, freshStats } from '../gameplay/stats.js';
 import { setupMenus, showTitle, hideMenus, openPause, menuKey } from '../ui/menus.js';
 import { saveGame, loadGame } from './save.js';
 import { game, on, emit } from './state.js';
 import { stageShot } from '../dev/shots.js';
 import { setupProgression } from '../gameplay/progression.js';
 import { setupPost, resizePost, renderFrame, post } from '../fx/post.js';
-import { loadSettings, applySettings, saveSettings } from './settings.js';
+import { loadSettings } from './settings.js';
 import { applyGrade } from '../fx/grade.js';
 import { mats as cityMats } from '../world/city.js';
 import { buildLandmarks, updateLandmarks } from '../world/landmarks.js';
@@ -79,8 +80,9 @@ setupHud(camera);
 setupMinimap();
 setupAudioEvents();
 setupProgression();
+setupStats();
 setupInput(canvas, onKey);
-setupMenus({ newGame, continueGame, resume, save: (s) => { saveGame(s); emit('toast', { text: `SAVED TO SLOT ${s + 1}`, color: '#5dff6a' }); }, quit: quitToTitle, setting });
+setupMenus({ newGame, continueGame, resume, save: (s) => { saveGame(s); emit('toast', { text: `SAVED TO SLOT ${s + 1}`, color: '#5dff6a' }); }, quit: quitToTitle });
 
 // Chrome swallows the Esc that releases pointer lock, so losing the lock mid-game pauses.
 document.addEventListener('pointerlockchange', () => {
@@ -128,7 +130,7 @@ function resetRun() {
   Object.assign(game, {
     cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false },
     ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], missionBest: {}, tipsSeen: [], activeMission: null, side: defaultSide(), sideBusy: false,
-    stats: { stolen: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, maxStars: 0, cuffed: 0, downed: 0, playSeconds: 0, stunts: 0 },
+    stats: freshStats(),
     skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   });
 }
@@ -187,19 +189,6 @@ function quitToTitle() {
   if (ms.def) failMission('QUIT');
   abortActivity();
   enterTitle();
-}
-
-function setting(id, d) {
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  if (id === 'music') game.musicVol = clamp((game.musicVol ?? 0.32) + d * 0.032, 0, 0.64);
-  if (id === 'sfx') game.sfxVol = clamp((game.sfxVol ?? 0.8) + d * 0.1, 0, 1);
-  if (id === 'sens') game.sens = clamp((game.sens ?? 1) + d * 0.2, 0.2, 2);
-  if (id === 'shadows') game.shadows = game.shadows === false;
-  if (id === 'quality') game.quality = game.quality === 'LOW' ? 'HIGH' : 'LOW';
-  if (id === 'shake') game.shake = game.shake === false;
-  setVolume(game.musicVol, game.sfxVol);
-  applySettings();
-  saveSettings();
 }
 
 function onKey(code) {
@@ -272,6 +261,7 @@ function step(dt) {
   if (game.mode === 'play') {
     game.stats.playSeconds += dt;
     updatePlayer(dt);
+    updateStats(dt);
   }
   // Side activities first: an open shop menu swallows the number keys before combat sees them.
   updateActivities(dt, t, camera);

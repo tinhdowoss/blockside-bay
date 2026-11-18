@@ -14,7 +14,7 @@ import { vehicles } from '../gameplay/vehicles.js';
 import { player } from '../gameplay/player.js';
 import { sky } from '../world/daylight.js';
 
-export const { blip, uiClick, uiHover, jingle, checkpointSfx, coin, gunshot } = S;
+export const { blip, uiClick, uiHover, uiSwoosh, uiTick, jingle, checkpointSfx, coin, gunshot } = S;
 
 export function initAudio() {
   if (mix.ac) { if (mix.ac.state === 'suspended') mix.ac.resume(); return; }
@@ -24,11 +24,13 @@ export function initAudio() {
   setInterval(() => scheduleMusic(radio.on && game.mode !== 'pause'), 50);
 }
 
-export function setVolume(music, sfx) {
+// Music / effects bus levels plus the master output level (Settings: MASTER, MUSIC, EFFECTS).
+export function setVolume(music, sfx, master = game.masterVol ?? 1) {
   setMusicVolume(music ?? 0.32);
   if (!mix.ac) return;
   const v = sfx ?? 0.8;
   setBus(mix.sfx, v); setBus(mix.amb, v * 0.9); setBus(mix.ui, v);
+  setBus(mix.out, 0.85 * master);
 }
 
 export function setStation(i) { setStationMusic(i); game.radioStation = radio.station; }

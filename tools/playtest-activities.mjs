@@ -185,7 +185,7 @@ ok('pause map legend lists the activities', /Street race/.test(legend) && /Garag
 await snap('10-pause-map');
 await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
 await wait(300);
-const stats = await page.evaluate(() => document.querySelector('#pause .stats')?.textContent || '');
+const stats = await page.evaluate(() => document.querySelector('#pause .statgrid')?.textContent || '');
 ok('STATS tab shows the side counters', /SEA GLASS\s*1\/30/.test(stats) && /TAXI FARES\s*1/.test(stats), stats.slice(0, 80));
 await snap('11-stats');
 
