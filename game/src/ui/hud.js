@@ -101,16 +101,18 @@ function addPopup(p) {
   el.textContent = p.text;
   el.style.color = p.color || '#fff';
   root.appendChild(el);
-  popups.push({ el, x: p.x, y: p.y, z: p.z, t: p.hold ? 1e9 : 1.6 });
+  // Pop-ups that appear together stack upwards instead of printing over each other.
+  const slot = popups.filter((q) => q.t > 0.8).length;
+  popups.push({ el, x: p.x, y: p.y, z: p.z, t: p.hold ? 1e9 : 1.6, lift: slot * 46 });
 }
 
 const v3 = new THREE.Vector3();
-function place(el, x, y, z) {
+function place(el, x, y, z, lift = 0) {
   v3.set(x, y, z).project(camera);
   if (v3.z > 1) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.style.left = `${(v3.x * 0.5 + 0.5) * innerWidth}px`;
-  el.style.top = `${(-v3.y * 0.5 + 0.5) * innerHeight}px`;
+  el.style.top = `${(-v3.y * 0.5 + 0.5) * innerHeight - lift}px`;
 }
 
 export function showHud(on_) { root.style.display = on_ ? 'block' : 'none'; }
@@ -237,7 +239,7 @@ export function updateHud(dt) {
     const p = popups[i];
     p.t -= dt;
     p.y += dt * 0.8;
-    place(p.el, p.x, p.y, p.z);
+    place(p.el, p.x, p.y, p.z, p.lift);
     p.el.style.opacity = Math.min(1, p.t);
     if (p.t <= 0) { p.el.remove(); popups.splice(i, 1); }
   }

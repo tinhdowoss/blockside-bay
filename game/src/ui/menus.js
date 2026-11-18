@@ -3,9 +3,9 @@
 import { GAME_TITLE, DISTRICTS, CELL, GRID_N, OCEAN_X, CITY_SIZE, SAVE_SLOTS, BEACH_NAME } from '../core/config.js';
 import { drawBlockyTitle, drawPixelText, textWidth } from './pixelfont.js';
 import { CAST, CREW, portraitURL } from '../data/cast.js';
-import { MISSIONS, CHAPTER_NAMES } from '../data/missions-data.js';
+import { MISSIONS, CHAPTER_NAMES, STORY_HOOK } from '../data/missions-data.js';
 import { cityMapImage, toMap } from './minimap.js';
-import { city } from '../world/city.js';
+import { city, nearestNode, nodePos } from '../world/city.js';
 import { player } from '../gameplay/player.js';
 import { police } from '../gameplay/police.js';
 import { ms, nextMission } from '../gameplay/missions.js';
@@ -13,6 +13,7 @@ import { listSlots, latestSlot } from '../core/save.js';
 import { game, completion } from '../core/state.js';
 import { sky } from '../world/daylight.js';
 import { blip } from '../audio/radio.js';
+import { repLevel } from '../gameplay/progression.js';
 
 let root, actions = {}, titleSel = 0, pauseTab = 'map', pauseSel = 0, titleItems = [];
 const KEYS = [
@@ -48,22 +49,22 @@ export function logoCanvas() {
 export function showTitle() {
   const latest = latestSlot();
   titleItems = [
-    { id: 'continue', label: 'CONTINUE', sub: latest ? `Slot ${latest.slot + 1}  ·  ${latest.data.pct}%  ·  ${latest.data.place}` : 'No save yet - starts a new story', act: () => actions.continueGame(latest) },
+    { id: 'continue', label: 'CONTINUE', sub: latest ? slotLine(latest) : 'No save yet - starts a new story', act: () => actions.continueGame(latest) },
     { id: 'new', label: 'NEW GAME', sub: 'Chapter 1: Homecoming', act: () => actions.newGame() },
     { id: 'load', label: 'LOAD GAME', sub: `${listSlots().filter((s) => s.data).length} of ${SAVE_SLOTS} slots used`, act: () => titleSub('load') },
     { id: 'controls', label: 'CONTROLS', sub: 'Keyboard + mouse', act: () => titleSub('controls') },
-    { id: 'settings', label: 'SETTINGS', sub: 'Audio  ·  mouse  ·  shadows', act: () => titleSub('settings') },
+    { id: 'settings', label: 'SETTINGS', sub: 'Audio  ·  graphics  ·  mouse  ·  shake', act: () => titleSub('settings') },
   ];
   titleSel = 0;
   root.innerHTML = `<div id="title" class="outl">
     <div class="logo-holder"></div>
     <div class="tagline">A VOXEL CRIME STORY  ·  SUN, NEON & BAD DECISIONS</div>
+    <div class="hook">${STORY_HOOK}</div>
     <div class="menu"></div>
     <div class="sub panel"></div>
-    <div class="keys panel"><h3>CONTROLS</h3>${KEYS.map(([k, d]) => `<div class="k"><span class="kc">${k}</span>${d}</div>`).join('')}</div>
     <div class="crewlabel">THE CREW</div>
-    <div class="crew">${CREW.map((id) => `<div class="c"><img src="${portraitURL(id)}" alt=""><b>${CAST[id].name.split(' ')[0]}</b><i>${CAST[id].role}</i></div>`).join('')}</div>
-    <div class="foot">${GAME_TITLE}  ·  an original game  ·  ENTER to select</div>
+    <div class="crew">${CREW.map((id) => `<div class="c" style="--c:${CAST[id].accent || CAST[id].shirt}"><img src="${portraitURL(id)}" alt=""><b>${CAST[id].name}</b><i>${CAST[id].role}</i></div>`).join('')}</div>
+    <div class="foot"><span class="kc">&#8593; &#8595;</span> choose  <span class="kc">ENTER</span> select</div>
   </div>`;
   const logo = logoCanvas();
   logo.className = 'logo';
@@ -84,7 +85,7 @@ function renderTitleMenu() {
 function titleSub(kind) {
   const el = root.querySelector('#title .sub');
   el.style.display = 'block';
-  if (kind === 'controls') el.innerHTML = `<h3 style="color:#ffd23f">HOW TO PLAY</h3><div style="font-family:Trebuchet MS;font-weight:bold;font-size:14px;line-height:1.4">Walk up to any car and press <span class="kc">F</span> to pull the driver out - every theft adds a wanted star. Break line of sight with the police to let the stars cool down. Yellow markers start story missions. Hold <span class="kc">SHIFT</span> in a car for handbrake drifts. Click the screen to lock the mouse for aiming.</div>`;
+  if (kind === 'controls') el.innerHTML = `<h3 style="color:#ffd23f">CONTROLS</h3>${KEYS.map(([k, d]) => `<div class="k"><span class="kc">${k}</span>${d}</div>`).join('')}<h3 style="color:#ffd23f;margin-top:10px">HOW TO PLAY</h3><div style="font-family:Trebuchet MS;font-weight:bold;font-size:14px;line-height:1.4">Walk up to any car and press <span class="kc">F</span> to pull the driver out - every theft adds a wanted star. Break line of sight with the police to let the stars cool down. Yellow markers start story missions. Hold <span class="kc">SHIFT</span> in a car for handbrake drifts. Click the screen to lock the mouse for aiming.</div>`;
   if (kind === 'settings') el.innerHTML = settingsHTML();
   if (kind === 'load') {
     el.innerHTML = '<h3 style="color:#ffd23f">LOAD GAME</h3>' + listSlots().map((s) => `<div class="btn panel" data-slot="${s.slot}" style="padding:8px;margin:6px 0;font-size:16px">SLOT ${s.slot + 1}  ${s.data ? `· ${s.data.pct}% · $${s.data.cash.toLocaleString()}` : '· empty'}</div>`).join('');
@@ -94,6 +95,13 @@ function titleSub(kind) {
 }
 
 export function hideMenus() { root.innerHTML = ''; }
+
+// One line describing a save: chapter, completion, cash and play time.
+function slotLine(s) {
+  const d = s.data, secs = d.stats?.playSeconds || 0;
+  const time = `${Math.floor(secs / 3600)}h ${String(Math.floor(secs / 60) % 60).padStart(2, '0')}m`;
+  return `Slot ${s.slot + 1}  ·  ${d.chapter || d.place}  ·  ${d.pct}%  ·  $${d.cash.toLocaleString('en-US')}  ·  ${time}`;
+}
 
 // ---- Pause -----------------------------------------------------------------------------
 export function openPause(tab = 'map') {
@@ -128,22 +136,24 @@ function pauseBody() {
     const nm = ms.def || nextMission();
     const story = MISSIONS.map((m, i) => {
       const d = game.missionsDone.includes(m.id), now = nm && nm.id === m.id;
-      return `<div class="${d || now ? '' : 'dim'}"><span class="ck ${d ? 'done' : now ? 'now' : ''}">${d ? '&#10003;' : now ? '!' : ''}</span>${i + 1}. ${m.title}</div>`;
+      return `<div class="${d || now ? '' : 'dim'}"><span class="ck ${d ? 'done' : now ? 'now' : ''}">${d ? '&#10003;' : i + 1}</span>${m.title}<em>$${(m.reward / 1000).toFixed(m.reward % 1000 ? 1 : 0)}K</em></div>`;
     }).join('');
     const skills = Object.entries(game.skills).map(([k, v]) => `<div class="skill">${k.toUpperCase()} <span style="float:right;color:#ffe9a8">LV ${1 + Math.floor(v * 9)}</span><div class="bar"><i style="width:${v * 100}%"></i></div></div>`).join('');
     const pct = completion();
+    const rep = repLevel();
     const acts = [['resume', 'RESUME'], ['save', 'SAVE GAME'], ['quit', 'QUIT TO TITLE']];
     return `<div class="mapbox panel"><canvas id="pausemap" width="640" height="560"></canvas></div>
       <div class="side">
         <div class="card panel story"><h3>STORY  ${done}/9</h3>${story}</div>
         <div class="card panel"><h3>SKILLS</h3>${skills}</div>
         <div class="card panel legend"><h3>LEGEND</h3>
-          <div><span style="background:#ffd23f"></span>Story mission</div><div><span style="background:#ff4fa3"></span>Objective</div><div><span style="background:#ffffff;border-radius:50%"></span>You</div>
+          <div><span style="background:#ffd23f;border-radius:50% 50% 50% 0"></span>Next job (1-9)</div><div><span style="background:#ff4fa3"></span>Route + objective</div><div><span style="background:#ffffff;border-radius:50%"></span>You</div>
           <div><span style="background:#2a6aff"></span>Police</div><div><span style="background:#ff2a2a"></span>Gang</div><div><span style="background:#2ee6c8"></span>Safehouse</div>
           <div><span style="background:#fff"></span>Landmark</div><div><span style="background:#ffe2a0"></span>Beach</div><div><span style="background:#c08a55"></span>Pier + yacht</div></div>
         <div class="card panel slotcard"><div class="slotinfo"><h3>SAVE SLOT ${game.slot + 1}</h3><div class="pct">${pct}% <span style="font-size:16px;color:#fff">COMPLETE</span></div>
           <div class="meta">CH ${(ms.def || nextMission() || { chapter: 7 }).chapter} ${CHAPTER_NAMES[(ms.def || nextMission() || { chapter: 7 }).chapter]}  ·  ${Math.floor(game.stats.playSeconds / 3600)}h ${String(Math.floor(game.stats.playSeconds / 60) % 60).padStart(2, '0')}m played</div>
-          <div class="bar pbar"><i style="width:${pct}%"></i></div></div>
+          <div class="bar pbar"><i style="width:${pct}%"></i></div>
+          <div class="meta rep">REP ${rep.level}  ${rep.title}  ·  ${game.rep.toLocaleString('en-US')} XP</div></div>
           <div class="actions">${acts.map(([a, l], i) => `<div class="btn ${i === pauseSel ? 'sel' : ''}" data-act="${a}">${l}</div>`).join('')}</div></div>
       </div>`;
   }
@@ -224,12 +234,30 @@ function drawPauseMap(cv) {
     g.fillStyle = '#12061c'; g.font = 'bold 13px Arial Black, sans-serif'; g.textAlign = 'center'; g.fillText(ch, p.x, p.y + 5);
   };
   pin(P(city.landmarks.safehouse.x, city.landmarks.safehouse.z), '#2ee6c8', 'H');
-  for (const m of MISSIONS) {
-    if (game.missionsDone.includes(m.id)) continue;
-    const l = city.landmarks[m.start];
-    const cur = (ms.def || nextMission())?.id === m.id;
-    if (cur) pin(P(l.x, l.z), '#ffd23f', CAST[m.giver].name[0]);
+  // GPS route to the current job: along the road grid from the player to the target.
+  const cur = ms.def || nextMission();
+  const goal = ms.goal || (cur && city.landmarks[cur.start]);
+  if (goal) {
+    const a = nearestNode(player.x, player.z), b = nearestNode(goal.x, goal.z);
+    const pa = nodePos(a.i, a.j), pb = nodePos(b.i, b.j);
+    const pts = [P(player.x, player.z), P(pa.x, pa.z), P(pb.x, pa.z), P(pb.x, pb.z), P(goal.x, goal.z)];
+    g.lineJoin = 'round';
+    for (const [w, c] of [[9, '#12061c'], [5, '#ff4fa3']]) {
+      g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+      g.lineWidth = w; g.strokeStyle = c; g.setLineDash(c === '#12061c' ? [] : [10, 6]); g.stroke();
+    }
+    g.setLineDash([]);
   }
+  // Story pins, numbered 1-9: done (green tick), the current job (big, yellow), the rest (grey).
+  const byStart = {};
+  MISSIONS.forEach((m, i) => (byStart[m.start] ||= []).push(i));
+  MISSIONS.forEach((m, i) => {
+    const l = city.landmarks[m.start], group = byStart[m.start], k = group.indexOf(i);
+    const at = P(l.x, l.z);
+    const x = at.x + (k - (group.length - 1) / 2) * 24, y = at.y - 20;
+    const done = game.missionsDone.includes(m.id), now = cur && cur.id === m.id;
+    storyPin(g, x, now ? y - 6 : y, i + 1, done ? '#5dff6a' : now ? '#ffd23f' : '#b8b0c8', now ? 15 : 11, done);
+  });
   if (ms.goal) pin(P(ms.goal.x, ms.goal.z), '#ff4fa3', '!');
   for (const u of police.units) { const p = P(u.x, u.z); g.fillStyle = '#2a6aff'; g.fillRect(p.x - 5, p.y - 5, 10, 10); }
   const pp = P(player.x, player.z);
@@ -238,6 +266,19 @@ function drawPauseMap(cv) {
   // Frame + compass
   g.fillStyle = '#12061c'; g.fillRect(cv.width - 46, 10, 36, 36);
   drawPixelText(g, 'N', cv.width - 34, 18, 2, '#ffd23f');
+}
+
+// A teardrop map pin with the mission number (or a tick once done).
+function storyPin(g, x, y, n, col, r, done) {
+  g.beginPath();
+  g.moveTo(x, y + r * 1.9);
+  g.arc(x, y, r, Math.PI * 0.75, Math.PI * 0.25);
+  g.closePath();
+  g.fillStyle = col; g.fill();
+  g.lineWidth = 3; g.strokeStyle = '#12061c'; g.stroke();
+  g.fillStyle = '#12061c'; g.textAlign = 'center';
+  g.font = `bold ${Math.round(r * 1.25)}px Arial Black, sans-serif`;
+  g.fillText(done ? '✓' : String(n), x, y + r * 0.45);
 }
 
 function label(g, text, p, color, small = false, vertical = false) {

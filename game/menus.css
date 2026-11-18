@@ -4,27 +4,28 @@
 .btn { cursor: pointer; }
 
 /* Title */
-#title { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(40, 8, 60, 0.82) 0%, rgba(40, 8, 60, 0.55) 36%, rgba(40, 8, 60, 0) 58%); }
-#title .logo { position: absolute; left: 30px; top: 16px; width: 540px; image-rendering: pixelated; }
-#title .tagline { position: absolute; left: 44px; top: 206px; font-size: 18px; color: #ffe9a8; letter-spacing: 3px; }
-#title .menu { position: absolute; left: 44px; top: 240px; display: flex; flex-direction: column; gap: 5px; width: 380px; }
-#title .menu .btn { font-size: 22px; padding: 4px 14px; color: #fff; background: rgba(18, 6, 28, 0.55); border: 3px solid transparent; letter-spacing: 1px; }
-#title .menu .btn small { display: block; font-size: 12px; color: #ffe9a8; font-family: "Trebuchet MS", sans-serif; font-weight: bold; letter-spacing: 0; }
+#title { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(40, 8, 60, 0.72) 0%, rgba(40, 8, 60, 0.42) 34%, rgba(40, 8, 60, 0) 56%), linear-gradient(0deg, rgba(30, 6, 40, 0.75) 0%, rgba(30, 6, 40, 0) 26%); }
+#title .logo { position: absolute; left: 30px; top: 14px; width: 540px; image-rendering: pixelated; filter: drop-shadow(0 0 18px rgba(255, 120, 80, 0.55)); }
+#title .tagline { position: absolute; left: 44px; top: 204px; font-size: 18px; color: #ffe9a8; letter-spacing: 3px; }
+#title .hook { position: absolute; left: 44px; top: 232px; width: 720px; font-family: "Trebuchet MS", sans-serif; font-weight: bold; font-style: italic; font-size: 18px; color: #fff; }
+#title .menu { position: absolute; left: 44px; top: 264px; display: flex; flex-direction: column; gap: 4px; width: 470px; }
+#title .menu .btn { font-size: 19px; line-height: 1.1; padding: 3px 14px 4px; color: #fff; background: rgba(18, 6, 28, 0.6); border: 3px solid transparent; letter-spacing: 1px; }
+#title .menu .btn small { display: block; font-size: 12px; line-height: 1.2; color: #ffe9a8; font-family: "Trebuchet MS", sans-serif; font-weight: bold; letter-spacing: 0; white-space: nowrap; }
 #title .menu .btn.sel { background: linear-gradient(90deg, #ffd23f, #ff8fc8); color: #12061c; border-color: #12061c; box-shadow: 0 0 0 3px #fff, 6px 6px 0 rgba(0,0,0,0.35); text-shadow: none; }
 #title .menu .btn.sel small { color: #4a1838; }
 #title .menu .btn.sel::before { content: '\25B6  '; }
-#title .keys { position: absolute; right: 24px; top: 20px; width: 290px; padding: 12px 14px; }
-#title .keys h3, #pause h3 { margin: 0 0 8px; font-size: 15px; color: #ffd23f; letter-spacing: 2px; }
-#title .keys .k { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 5px 0; font-family: "Trebuchet MS", sans-serif; font-weight: bold; }
+#title h3, #pause h3 { margin: 0 0 8px; font-size: 15px; color: #ffd23f; letter-spacing: 2px; }
+#title .k { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 5px 0; font-family: "Trebuchet MS", sans-serif; font-weight: bold; }
 .kc { display: inline-block; min-width: 50px; text-align: center; padding: 3px 6px; background: #fff; color: #12061c; border: 2px solid #12061c; box-shadow: 0 3px 0 #12061c; font-family: var(--font); font-size: 12px; text-shadow: none; }
-#title .crew { position: absolute; left: 44px; bottom: 12px; display: flex; gap: 12px; align-items: flex-end; }
-#title .crew .c { width: 92px; text-align: center; }
-#title .crew img { width: 80px; height: 80px; image-rendering: pixelated; border: 3px solid #fff; box-shadow: 0 0 0 3px #12061c; }
-#title .crew b { display: block; font-size: 12px; margin-top: 6px; }
-#title .crew i { display: block; font-style: normal; font-size: 11px; color: #ffe9a8; font-family: "Trebuchet MS", sans-serif; font-weight: bold; }
-#title .crewlabel { position: absolute; left: 44px; bottom: 136px; font-size: 14px; color: #ffd23f; letter-spacing: 2px; }
-#title .foot { position: absolute; right: 24px; bottom: 16px; font-size: 13px; color: #ffe9a8; }
-#title .sub { position: absolute; left: 440px; top: 240px; width: 340px; padding: 14px; display: none; }
+#title .crewlabel { position: absolute; left: 44px; bottom: 140px; font-size: 16px; color: #ffd23f; letter-spacing: 3px; }
+#title .crew { position: absolute; left: 44px; bottom: 14px; display: flex; gap: 10px; align-items: flex-end; }
+#title .crew .c { width: 112px; padding: 5px 0 6px; text-align: center; background: rgba(18, 6, 28, 0.72); border: 3px solid #12061c; border-top: 5px solid var(--c); }
+#title .crew img { width: 58px; height: 58px; image-rendering: pixelated; border: 3px solid #fff; box-shadow: 0 0 0 3px #12061c; background: var(--c); }
+#title .crew b { display: block; font-size: 12px; margin-top: 5px; line-height: 1.15; }
+#title .crew i { display: block; font-style: normal; font-size: 13px; color: var(--c); margin-top: 2px; }
+#title .foot { position: absolute; right: 24px; bottom: 16px; font-size: 14px; color: #ffe9a8; }
+#title .foot .kc { min-width: 0; margin: 0 4px; }
+#title .sub { position: absolute; left: 530px; top: 268px; width: 360px; padding: 14px; display: none; }
 
 /* Pause */
 #pause { position: absolute; inset: 0; background: rgba(20, 6, 34, 0.9); }
@@ -39,11 +40,14 @@
 #pause .mapbox canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
 #pause .side { position: absolute; left: 670px; right: 0; top: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 10px; }
 #pause .card { padding: 10px 12px; }
-#pause .story div { font-size: 13px; margin: 3px 0; display: flex; gap: 6px; align-items: center; font-family: "Trebuchet MS", sans-serif; font-weight: bold; white-space: nowrap; }
-#pause .story .ck { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #12061c; background: #3a2a50; color: #12061c; flex: none; }
+#pause .story div { font-size: 14px; margin: 3px 0; display: flex; gap: 7px; align-items: center; font-family: var(--font); white-space: nowrap; }
+#pause .story em { margin-left: auto; font-style: normal; color: #5dff6a; font-size: 13px; }
+#pause .story .dim em { color: #9a8ab0; }
+#pause .story .ck { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; text-shadow: none; border: 2px solid #12061c; background: #3a2a50; color: #12061c; flex: none; }
 #pause .story .ck.done { background: #5dff6a; }
 #pause .story .ck.now { background: #ffd23f; }
 #pause .story .dim { color: #9a8ab0; }
+#pause .story .dim .ck { background: #b8b0c8; }
 #pause .skill { margin: 6px 0 10px; font-size: 13px; }
 #pause .skill .bar { margin-top: 3px; height: 12px; }
 #pause .skill .bar i { background: linear-gradient(90deg, #2ee6c8, #ffd23f); }
@@ -67,3 +71,4 @@
 #pause .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 #pause .settings .row { display: flex; align-items: center; gap: 12px; font-size: 18px; margin: 12px 0; }
 #pause .settings .row .btn { padding: 2px 12px; background: #fff; color: #12061c; border: 2px solid #12061c; }
+#pause .slotinfo .meta.rep { margin-top: 6px; color: #2ee6c8; }

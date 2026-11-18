@@ -5,7 +5,7 @@ export const CAST = {
   jolie: { name: 'JOLIE BANKS', role: 'Partner', skin: '#8d5a3b', hair: '#1a0f0a', hairStyle: 'curls', shirt: '#2ee6c8', eyes: '#1b1b1b', extra: 'hoops' },
   mari: { name: 'MARI VEGA', role: 'Planner', skin: '#e0a77a', hair: '#7a2a1a', hairStyle: 'bob', shirt: '#ffd23f', eyes: '#2b1b0b', extra: 'shades' },
   teddy: { name: 'TEDDY BRIX', role: 'Muscle', skin: '#6b4430', hair: '#111111', hairStyle: 'bald', shirt: '#7a5cff', eyes: '#1b1b1b', extra: 'beard' },
-  dez: { name: 'DEZ OKORO', role: 'Hacker', skin: '#a8714c', hair: '#3fd0ff', hairStyle: 'spike', shirt: '#222a3a', eyes: '#1b1b1b', extra: 'visor' },
+  dez: { name: 'DEZ OKORO', role: 'Hacker', skin: '#a8714c', hair: '#3fd0ff', hairStyle: 'spike', shirt: '#222a3a', accent: '#3fd0ff', eyes: '#1b1b1b', extra: 'visor' },
   pia: { name: 'PIA SOLANO', role: 'Lookout', skin: '#f1c7a0', hair: '#ff8fd0', hairStyle: 'bob', shirt: '#ff7a3d', eyes: '#1b1b1b', extra: 'freckles' },
   ocampo: { name: 'RICO OCAMPO', role: 'Neon Vipers boss', skin: '#d29a6a', hair: '#0d0d0d', hairStyle: 'slick', shirt: '#a020f0', eyes: '#c00000', extra: 'scar' },
   gus: { name: 'AUGUSTINE SALT', role: 'Saltwater Kings', skin: '#f1c7a0', hair: '#e8e8e8', hairStyle: 'slick', shirt: '#f4f4f4', eyes: '#2a4a8a', extra: 'shades' },

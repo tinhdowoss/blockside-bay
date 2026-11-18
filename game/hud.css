@@ -31,8 +31,8 @@
 #mission .m-next b { background: var(--teal); }
 #mission .m-hint b { background: #c9b8ff; }
 #mission .m-hint span { color: #e4dcff; }
-#rep { width: 300px; padding: 6px 10px 7px; border-left: 8px solid var(--teal); }
-#rep .r-lv { display: flex; align-items: baseline; gap: 8px; font-size: 16px; }
+#rep { width: 360px; padding: 6px 10px 7px; border-left: 8px solid var(--teal); }
+#rep .r-lv { display: flex; align-items: baseline; gap: 8px; font-size: 16px; white-space: nowrap; }
 #rep .lv { color: var(--teal); font-size: 17px; }
 #rep .gain { margin-left: auto; font-style: normal; color: var(--green); font-size: 14px; }
 #rep .r-bar { position: relative; height: 10px; margin-top: 4px; background: #2a1840; border: 2px solid var(--ink); }

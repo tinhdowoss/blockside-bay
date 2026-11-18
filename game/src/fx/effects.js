@@ -25,7 +25,7 @@ export function setupEffects(sc) {
   flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('#ffe08a'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
   flashSprite.visible = false;
   scene.add(flashSprite);
-  flashLight = new THREE.PointLight(0xffc060, 0, 14, 1.5);
+  flashLight = new THREE.PointLight(0xffd8a0, 0, 10, 1.8);
   scene.add(flashLight);
   for (let i = 0; i < 24; i++) {
     // A thin glowing box stretched between muzzle and impact.
@@ -74,7 +74,7 @@ export function flash(x, y, z, scale = 1.4) {
   flashSprite.scale.setScalar(scale);
   flashSprite.visible = true;
   flashLight.position.set(x, y, z);
-  flashLight.intensity = 30;
+  flashLight.intensity = 9;
   flashT = 0.06;
 }
 

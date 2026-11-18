@@ -8,7 +8,7 @@ import { player, placePlayer, syncModel } from '../gameplay/player.js';
 import { setCameraPose, speedRush } from '../gameplay/camera.js';
 import { stealVehicle } from '../gameplay/carjack.js';
 import { police, setWanted, spawnUnit, placeHeli, placeRoadblockAt } from '../gameplay/police.js';
-import { spawnShooter, shooters } from '../gameplay/combat.js';
+import { spawnShooter, shooters, damageCharacter } from '../gameplay/combat.js';
 import { startMission, ms } from '../gameplay/missions.js';
 import { MISSIONS } from '../data/missions-data.js';
 import { showLine } from '../ui/dialogue.js';
@@ -135,13 +135,11 @@ const SCENES = {
 
   // Title screen over the live city: Kai beside the pink Coralline on Seaglass Boulevard.
   title(api) {
-    setHour(7.9); sky.fixed = true;
+    setHour(18.2); sky.fixed = true;
     const S = api.SHOWCASE;
     // A previous session in slot 1 so CONTINUE shows real progress.
-    game.missionsDone = MISSIONS.slice(0, 6).map((m) => m.id);
-    game.cash = 184250;
-    game.skills = { driving: 0.7, shooting: 0.55, stamina: 0.6, stealth: 0.4 };
-    Object.assign(game.stats, { stolen: 31 });
+    progress(6, { cash: 184250, skills: { driving: 0.7, shooting: 0.55, stamina: 0.6, stealth: 0.4 } });
+    Object.assign(game.stats, { stolen: 31, playSeconds: 3 * 3600 + 42 * 60 });
     placePlayer(city.landmarks.pier.x - 60, city.landmarks.pier.z, 0);
     saveGame(0);
     clearStreet(S.x - 20, S.z - 30, S.x + 20, S.z + 30);
@@ -152,7 +150,11 @@ const SCENES = {
     syncModel();
     const pr = player.model.userData.parts;
     pr.armL.rotation.z = -0.25; pr.armR.rotation.x = -0.4; pr.legL.rotation.x = 0.12; pr.legR.rotation.x = -0.12;
-    setCameraPose(S.x - 3.2, 2.2, S.z + 9.5, S.x - 6.4, 2.6, S.z - 6);
+    // Evening strollers on the beach-side promenade.
+    const P = 8 * CELL + 7.6;
+    [[P + 0.4, S.z - 14, 3.1], [P + 1.4, S.z - 19, 0], [P + 0.6, S.z - 27, 3.0], [8 * CELL - 7.6, S.z - 22, 0.1]].forEach(([x, z, yaw], i) => stagePed(x, z, 'walk', yaw, i * 2.1));
+    setCameraPose(S.x - 2.4, 1.45, S.z + 9.6, S.x - 6.8, 4.6, S.z - 8);
+    updateEffects(0);
     api.loop.freeze(true);
     ready(api);
   },
@@ -163,9 +165,9 @@ const SCENES = {
     const X = 4 * CELL + 26, Z = 2 * CELL + 1.5;
     clearStreet(X - 60, Z - 25, X + 60, Z + 25);
     api.startPlaying(X, Z);
-    game.cash = 61420; game.health = 72; game.armor = 45;
+    progress(4, { cash: 61270, health: 72, armor: 45 });
+    game.rep += 160;
     game.weapons.smg = true; game.weapon = 2; game.clip.smg = 24; game.ammo.smg = 150;
-    game.missionsDone = MISSIONS.slice(0, 4).map((m) => m.id);
     startMission(MISSIONS[4], 1);
     // Re-place the squad along the street ahead of the player.
     for (const s of [...shooters]) { s.x = 9999; }
@@ -197,13 +199,23 @@ const SCENES = {
     const m = new THREE.Vector3(X + 0.9, 1.55, Z - 0.42);
     flash(m.x, m.y, m.z, 1.8); holdFlash();
     const victim = sq.filter((s) => s.alive && !s.boss).sort((a, b) => a.z - b.z)[0];
-    tracer(m, new THREE.Vector3(victim.x, 1.9, victim.z));
+    const head = new THREE.Vector3(victim.x, 1.9, victim.z);
+    tracer(m, head);
+    tracer(m, new THREE.Vector3(boss.x + 0.3, 1.2, boss.z - 1.4));
     tracer(new THREE.Vector3(boss.x - 0.9, 1.55, boss.z - 0.4), new THREE.Vector3(X + 0.6, 1.3, Z + 0.8));
-    spawn(victim.x, 1.9, victim.z, 0, 0.5, 0, 99, 0.25, '#c0102a');
-    for (let i = 0; i < 10; i++) spawn(victim.x + (i % 3) * 0.15 - 0.15, 1.7 + (i % 4) * 0.12, victim.z + (i % 2) * 0.2, 0, 0, 0, 99, 0.16, '#d0182a');
+    // The real hit path: headshot damage, the cash bonus, the rep gain and the HEADSHOT pop-up.
+    damageCharacter(victim, 999, true, X, Z, head);
+    sparks(head.x, head.y, head.z, 8, '#ffe9a0');
+    sparks(boss.x + 0.3, 0.2, boss.z - 1.4, 14, '#fff0c0');
+    sparks(X + 0.8, 1.3, Z + 0.9, 10);
     for (let i = 0; i < 6; i++) spawn(X + 3 + i * 0.4, 0.06, Z - 0.6 + (i % 2) * 0.3, 0, 0, 0, 99, 0.12, '#ffd040');
-    holdPopup({ text: 'HEADSHOT +$150', x: victim.x + 1, y: 3.6, z: victim.z, color: '#ffe14a', big: true });
     clearCenterText();
+    // Civilians on Neon Mile scattering from the gunfight; the nearest duck and cover.
+    const N = 2 * CELL - 7.6, Sd = 2 * CELL + 7.6;
+    [[X + 7, N - 0.4, 'cower', 0.6], [X + 12, N - 1.2, 'flee', Math.PI - 0.3], [X + 21, N - 0.5, 'flee', Math.PI / 2 + 0.4], [X + 30, N - 1.5, 'flee', Math.PI / 2],
+      [X + 6, Sd + 0.6, 'cower', 2.4], [X + 16, Sd + 1.2, 'flee', 0.4], [X + 26, Sd + 0.4, 'flee', Math.PI / 2 - 0.3], [X + 36, Sd + 1.6, 'flee', Math.PI / 2 + 0.2]]
+      .forEach(([x, z, st, yaw], i) => stagePed(x, z, st, yaw, i * 1.3));
+    updateEffects(0);
     showLine('ocampo', 'Navarro! This is MY mile. Every light on this street answers to me!');
     holdPopup({ text: 'BOSS: RICO OCAMPO', x: boss.x, y: 2.45, z: boss.z, color: '#e08bff' });
     setCameraPose(X - 4.4, 2.8, Z + 2.5, X + 14, 1.5, Z - 0.6);
@@ -214,10 +226,10 @@ const SCENES = {
   // Pause menu MAP tab mid-story.
   map(api) {
     setHour(15.5); sky.fixed = true;
-    const s = city.landmarks.diner;
-    api.startPlaying(s.x + 20, s.z - 10);
-    game.cash = 48210;
-    game.missionsDone = MISSIONS.slice(0, 4).map((m) => m.id);
+    const s = city.landmarks.caracol;
+    api.startPlaying(s.x - 8, s.z + 14);
+    progress(4, { cash: 48210 });
+    game.rep += 160;
     game.skills = { driving: 0.62, shooting: 0.48, stamina: 0.71, stealth: 0.33 };
     Object.assign(game.stats, { stolen: 23, headshots: 41, kills: 96, shots: 820, hits: 455, distance: 48200, maxStars: 4, cuffed: 2, downed: 3, playSeconds: 3 * 3600 + 42 * 60 });
     game.slot = 0;
