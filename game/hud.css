@@ -12,63 +12,96 @@
 .outl { text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
 .panel { background: rgba(18, 6, 28, 0.78); border: 3px solid var(--ink); box-shadow: 0 0 0 2px rgba(255,255,255,0.18) inset, 4px 4px 0 rgba(0,0,0,0.35); }
 
-/* Mission panel (top-left) */
-#mission { position: absolute; left: 18px; top: 16px; width: 400px; padding: 10px 14px 12px; border-left: 8px solid var(--yellow); }
+/* Left column: mission panel + street rep */
+#leftcol { position: absolute; left: 16px; top: 14px; width: 440px; display: flex; flex-direction: column; gap: 8px; }
+#mission { padding: 9px 14px 10px; border-left: 8px solid var(--yellow); }
 #mission .m-head { display: flex; align-items: center; gap: 10px; }
-#mission .m-ch { background: var(--yellow); color: var(--ink); font-size: 17px; padding: 2px 8px; text-shadow: none; }
-#mission .m-title { font-size: 19px; color: var(--yellow); letter-spacing: 1px; }
-#mission .m-text { font-size: 19px; line-height: 1.22; margin-top: 7px; }
-#mission .m-bar { position: relative; height: 14px; margin-top: 9px; background: #2a1840; border: 2px solid var(--ink); }
+#mission .m-ch { background: var(--yellow); color: var(--ink); font-size: 18px; padding: 1px 8px; text-shadow: none; }
+#mission .m-title { font-size: 21px; line-height: 1.05; color: var(--yellow); letter-spacing: 1px; flex: 1; }
+#mission .m-stage { flex: none; font-size: 15px; padding: 2px 7px; background: #fff; color: var(--ink); text-shadow: none; }
+#mission .m-text { font-size: 21px; line-height: 1.18; margin-top: 6px; }
+#mission .m-bar { position: relative; height: 14px; margin-top: 8px; background: #2a1840; border: 2px solid var(--ink); }
 #mission .m-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--pink), var(--yellow)); }
-#mission .m-meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: 15px; color: #ffe9a8; }
-#mission .m-dots span { display: inline-block; width: 12px; height: 12px; margin-left: 4px; background: #3a2a50; border: 2px solid var(--ink); }
+#mission .m-meta { display: flex; justify-content: space-between; margin-top: 5px; font-size: 17px; color: #ffe9a8; }
+#mission .m-dots span { display: inline-block; width: 13px; height: 13px; margin-left: 4px; background: #3a2a50; border: 2px solid var(--ink); }
 #mission .m-dots span.done { background: var(--green); }
 #mission .m-dots span.now { background: var(--yellow); }
+#mission .m-next, #mission .m-hint { display: flex; gap: 8px; align-items: baseline; margin-top: 6px; font-family: "Trebuchet MS", sans-serif; font-weight: bold; font-size: 16px; line-height: 1.2; }
+#mission .m-next b, #mission .m-hint b { font-family: var(--font); font-size: 13px; padding: 1px 6px; color: var(--ink); text-shadow: none; flex: none; }
+#mission .m-next b { background: var(--teal); }
+#mission .m-hint b { background: #c9b8ff; }
+#mission .m-hint span { color: #e4dcff; }
+#rep { width: 300px; padding: 6px 10px 7px; border-left: 8px solid var(--teal); }
+#rep .r-lv { display: flex; align-items: baseline; gap: 8px; font-size: 16px; }
+#rep .lv { color: var(--teal); font-size: 17px; }
+#rep .gain { margin-left: auto; font-style: normal; color: var(--green); font-size: 14px; }
+#rep .r-bar { position: relative; height: 10px; margin-top: 4px; background: #2a1840; border: 2px solid var(--ink); }
+#rep .r-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--teal), #9fe0ff); }
+#rep .r-xp { font-size: 12px; color: #bfeee6; margin-top: 3px; }
 
-/* Police response list */
-#response { position: absolute; left: 18px; top: 200px; display: flex; flex-direction: column; gap: 5px; }
-#response div { font-size: 16px; padding: 4px 10px 4px 8px; background: rgba(18, 6, 28, 0.78); border-left: 6px solid; letter-spacing: 1px; width: max-content; }
-#response .r-title { border-left-color: #fff; color: #9fc4ff; font-size: 13px; }
-
-/* Top-right: clock, cash, stars, weapons */
-#topright { position: absolute; right: 20px; top: 12px; text-align: right; }
+/* Top-right: clock, cash, stars, weapons, police response */
+#topright { position: absolute; right: 18px; top: 10px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 #clock { font-size: 20px; color: #fff; }
 #cash { font-size: 46px; color: var(--green); line-height: 1.05; letter-spacing: 1px; }
-#stars { font-size: 38px; letter-spacing: 2px; line-height: 1; margin-top: 2px; }
+#stars { font-size: 38px; letter-spacing: 2px; line-height: 1; margin-top: 1px; }
 #stars span { color: rgba(30, 20, 40, 0.75); -webkit-text-stroke: 2px #fff; }
 #stars span.on { color: #fff; -webkit-text-stroke: 2px var(--ink); text-shadow: 0 0 10px #ffe680; }
 #stars.flash span.on { animation: starblink 0.5s steps(2) infinite; }
 @keyframes starblink { 50% { color: #3fa0ff; } }
-#weapons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
-#weapons .slot { width: 78px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.55; }
+#weapons { display: flex; justify-content: flex-end; gap: 5px; margin-top: 7px; }
+#weapons .slot { position: relative; width: 74px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.7; }
 #weapons .slot.on { opacity: 1; border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow); }
-#weapons .slot.locked { opacity: 0.25; }
-#weapons canvas { width: 48px; height: 24px; image-rendering: pixelated; }
-#weapons .slot b { font-size: 12px; }
-#ammo { font-size: 24px; margin-top: 5px; color: #fff; }
+#weapons .slot.locked { opacity: 0.6; background: rgba(40, 20, 50, 0.7); }
+#weapons .slot.locked canvas { opacity: 0.3; }
+#weapons .slot.locked small { color: #ff8fa8; font-size: 11px; }
+#weapons canvas { width: 44px; height: 22px; image-rendering: pixelated; }
+#weapons .slot b { font-size: 12px; line-height: 1.1; }
+#weapons .slot small { font-size: 13px; color: #ffe9a8; line-height: 1.1; }
+#weapons .slot .key { position: absolute; left: 3px; top: 1px; font-size: 11px; color: #c9b8ff; }
+#ammo { font-size: 24px; margin-top: 4px; color: #fff; }
 #ammo small { font-size: 16px; color: #ffe9a8; }
+#response { display: none; margin-top: 8px; width: 330px; padding: 7px 9px 8px; text-align: left; border-left: 8px solid #3fa0ff; text-shadow: none; }
+#response .hdr { display: flex; justify-content: space-between; font-size: 16px; color: #9fc4ff; letter-spacing: 1px; }
+#response .hdr b { color: #fff; }
+#response .status { position: relative; margin: 5px 0 6px; padding: 3px 8px; font-size: 18px; letter-spacing: 2px; text-align: center; overflow: hidden; }
+#response .status.seen { background: #ff3f5f; color: #fff; animation: seenblink 0.8s steps(2) infinite; }
+#response .status.lost { background: #3a2a50; color: #e4dcff; }
+#response .status i { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--green); }
+@keyframes seenblink { 50% { background: #c0203f; } }
+#response .u { display: flex; align-items: center; gap: 8px; font-size: 16px; margin-top: 4px; }
+#response .u .sign { flex: 1; color: #fff; }
+#response .u .dist { width: 48px; text-align: right; color: #ffe9a8; font-size: 15px; }
+#response .u .st { width: 104px; text-align: center; color: var(--ink); font-size: 13px; padding: 2px 0; }
+#response .more { font-size: 12px; color: #b8b0c8; margin-top: 3px; }
 
 /* Bottom-left: minimap + health/armor */
 #mapwrap { position: absolute; left: 22px; bottom: 18px; width: 214px; }
 #minimap { width: 214px; height: 214px; border-radius: 50%; border: 5px solid var(--ink); box-shadow: 0 0 0 3px #fff, 0 6px 0 rgba(0,0,0,0.35); display: block; background: #1fb6d6; }
-#district { position: absolute; left: 0; right: 0; top: -30px; text-align: center; font-size: 15px; color: #fff; }
+#district { position: absolute; left: -10px; right: -10px; top: -30px; text-align: center; font-size: 17px; color: #fff; }
 .bar { height: 14px; margin-top: 8px; background: #2a1840; border: 3px solid var(--ink); position: relative; }
 .bar i { position: absolute; left: 0; top: 0; bottom: 0; }
 #hp i { background: linear-gradient(#7cff8a, #22c94a); }
 #ar i { background: linear-gradient(#9fe0ff, #2f8dff); }
 .bar b { position: absolute; left: -26px; top: -7px; font-size: 18px; }
 
-/* Bottom-right: radio + speed */
-#speedo { position: absolute; right: 22px; bottom: 16px; text-align: right; }
-#speedo .num { font-size: 76px; line-height: 0.9; color: #fff; }
-#speedo .unit { font-size: 20px; color: var(--yellow); }
-#speedo .car { font-size: 19px; color: var(--pink); margin-top: 2px; }
-#speedo .car em { font-style: normal; color: #ff9a9a; }
-#speedo .gear { display: flex; gap: 3px; justify-content: flex-end; margin-top: 6px; }
-#speedo .gear span { width: 12px; height: 16px; background: #3a2a50; border: 2px solid var(--ink); }
+/* Bottom-right: speed, gear, body condition; radio top-centre */
+#speedo { position: absolute; right: 20px; bottom: 14px; width: 250px; text-align: right; }
+#speedo .num { font-size: 74px; line-height: 0.9; color: #fff; }
+#speedo .unit { font-size: 20px; color: var(--yellow); margin-left: 6px; }
+#speedo .gearrow { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+#speedo .gearno { font-size: 17px; color: var(--teal); white-space: nowrap; }
+#speedo .gear { display: flex; gap: 3px; }
+#speedo .gear span { width: 11px; height: 16px; background: #3a2a50; border: 2px solid var(--ink); }
 #speedo .gear span.on { background: var(--teal); }
 #speedo .gear span.hot { background: var(--pink); }
-#radio { position: absolute; right: 22px; bottom: 182px; padding: 7px 12px; display: flex; align-items: center; gap: 10px; border-left: 6px solid var(--pink); }
+#speedo .cond { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; font-size: 15px; }
+#speedo .cond b { color: #ffe9a8; }
+#speedo .cbar { position: relative; width: 120px; height: 14px; background: #2a1840; border: 3px solid var(--ink); }
+#speedo .cbar i { position: absolute; left: 0; top: 0; bottom: 0; }
+#speedo .cpct { width: 46px; }
+#speedo .car { font-size: 19px; color: var(--pink); margin-top: 4px; white-space: nowrap; }
+#speedo .car em { font-style: normal; font-size: 14px; padding: 1px 5px; background: #ff3f5f; color: #fff; text-shadow: none; vertical-align: 2px; }
+#radio { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); padding: 5px 12px; display: flex; align-items: center; gap: 10px; border-left: 6px solid var(--pink); }
 #radio .eq { display: flex; align-items: flex-end; gap: 2px; height: 26px; }
 #radio .eq i { width: 5px; background: var(--pink); }
 #radio .st { font-size: 18px; }

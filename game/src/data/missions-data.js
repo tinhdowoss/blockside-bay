@@ -51,7 +51,7 @@ export const MISSIONS = [
     id: 'tape', chapter: 4, title: 'SUNSET TAPE', giver: 'dez', start: 'caracol', reward: 4000,
     blurb: 'A security tape at the Sunset Shores Motel links the crew to the Pink Slip job.',
     stages: [
-      { type: 'pickup', at: 'shores', text: 'Grab the tape from the Sunset Shores Motel', say: [['dez', 'Room 12. The motel camera caught your face. The tape caught your good side.']] },
+      { type: 'pickup', at: 'shores', text: 'Grab the tape from the Sunset Shores Motel', say: [['pia', "Motel manager just went for a smoke. You've got a minute."], ['dez', 'Room 12. The motel camera caught your face. The tape caught your good side.']] },
       { type: 'wanted', level: 2, text: 'Motel security called it in' },
       { type: 'lose', text: 'Lose the cops', say: [['dispatch', 'Suspect fleeing Sunset Shores on foot, pink shirt, bad attitude.']] },
       { type: 'goto', at: 'safehouse', text: "Take the tape to Kai's place" },
@@ -63,15 +63,15 @@ export const MISSIONS = [
     stages: [
       { type: 'steal', model: 'coralline', spawn: 'caracol', text: 'Steal the Coralline GT in Little Caracol', say: [['mari', "Salt's yacht only lets in pink Corallines tonight. Don't ask. Rich people."]] },
       { type: 'wanted', level: 4, text: 'Every cop in the Bay is on you' },
-      { type: 'lose', timer: 150, text: 'Lose the cops before the yacht leaves Coral Pier', say: [['mari', "You've got the whole BBPD on your bumper. Lose them before the yacht leaves Coral Pier!"]] },
+      { type: 'lose', timer: 150, text: 'Lose the cops before the yacht leaves Coral Pier', hint: 'Cut down side streets - the chopper beam lags behind you', say: [['mari', "You've got the whole BBPD on your bumper. Lose them before the yacht leaves Coral Pier!"]] },
       { type: 'drive', at: 'pier', needModel: 'coralline', timer: 90, text: 'Get to the end of Coral Pier', say: [['jolie', "Clear! Floor it, Kai, they're pulling the ropes!"]] },
     ],
   },
   {
-    id: 'salt', chapter: 6, title: 'SALTWATER', giver: 'teddy', start: 'garage', reward: 6000, armor: 100,
+    id: 'salt', chapter: 6, title: 'SALTWATER', giver: 'teddy', start: 'garage', reward: 6000, armor: 100, unlock: 'pump',
     blurb: "The yacht was a trap. Hit Salt's warehouse before he hits back.",
     stages: [
-      { type: 'goto', at: 'docks', text: 'Hit the Saltwater Kings warehouse', say: [['teddy', 'Salt sold us out on that boat. His warehouse is two blocks from my shop. Insulting.']] },
+      { type: 'goto', at: 'docks', text: 'Hit the Saltwater Kings warehouse', say: [['teddy', 'Salt sold us out on that boat. His warehouse is two blocks from my shop. Insulting.'], ['pia', 'I count eight on the roof and the loading bay. Bring the scatter gun.']] },
       { type: 'eliminate', at: 'docks', gang: 'salt', count: 8, text: 'Clear out the Saltwater Kings', say: [['gus', 'You should have stayed upstate, Navarro. The Bay eats boys like you.']] },
       { type: 'pickup', at: 'docks', text: "Grab Salt's ledger" },
     ],
@@ -87,5 +87,19 @@ export const MISSIONS = [
     ],
   },
 ];
+
+// One-line story hook for the title screen.
+export const STORY_HOOK = 'Six years upstate. One pink car. A whole bay that owes Kai Navarro.';
+
+// Fallback tips per stage type (a stage's own `hint` wins).
+export const HINTS = {
+  goto: 'Follow the pink marker on the minimap',
+  steal: 'Walk up to a car and press F to pull the driver out',
+  drive: 'Park inside the marker - Shift for a handbrake slide',
+  eliminate: 'Aim for the head: headshots drop anyone and pay extra',
+  wanted: 'Every theft and shot adds heat',
+  lose: 'Break line of sight - the stars cool down while hidden',
+  pickup: 'Get out of the car and walk into the marker',
+};
 
 export const CHAPTER_NAMES = ['', 'HOMECOMING', 'NEON MONEY', 'VIPER PIT', 'TAPES & LIES', 'YACHT WEEK', 'SALTWATER', 'LAST LIGHT'];

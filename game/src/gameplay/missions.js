@@ -1,5 +1,6 @@
 // Mission runner: start markers, stage objectives, timers, enemy squads, rewards, pass/fail.
-import { MISSIONS } from '../data/missions-data.js';
+import { MISSIONS, HINTS } from '../data/missions-data.js';
+import { WEAPONS } from '../core/config.js';
 import { city, collideCircle } from '../world/city.js';
 import { makeMarker } from '../world/models.js';
 import { Vehicle } from './vehicles.js';
@@ -78,7 +79,13 @@ function passMission() {
   const def = ms.def;
   game.missionsDone.push(def.id);
   addCash(def.reward);
-  if (def.unlock) { game.weapons[def.unlock] = true; game.ammo[def.unlock] = (game.ammo[def.unlock] || 0) + 150; game.clip[def.unlock] = 30; }
+  if (def.unlock) {
+    const w = WEAPONS.find((q) => q.id === def.unlock);
+    game.weapons[def.unlock] = true;
+    game.ammo[def.unlock] = (game.ammo[def.unlock] || 0) + w.clip * 5;
+    game.clip[def.unlock] = w.clip;
+    emit('toast', { text: `${w.name} UNLOCKED`, color: '#ffd23f' });
+  }
   if (def.ammo) for (const k in def.ammo) game.ammo[k] += def.ammo[k];
   if (def.armor) game.armor = Math.max(game.armor, def.armor);
   bumpSkill('driving', 0.05); bumpSkill('shooting', 0.04);
@@ -167,11 +174,18 @@ export function objectiveInfo() {
   const def = ms.def;
   if (!def) {
     const nm = nextMission();
-    if (!nm) return { chapter: 0, title: 'THE BAY IS YOURS', text: 'Free roam - all 9 story missions complete', idle: true };
-    return { chapter: nm.chapter, title: nm.title, text: `Go to ${lm(nm.start).name} to start (${CAST[nm.giver].name.split(' ')[0]})`, idle: true };
+    if (!nm) return { chapter: 0, title: 'THE BAY IS YOURS', text: 'Free roam - all 9 story missions complete', idle: true, hint: 'Steal, race and raise hell - the city is open' };
+    return {
+      chapter: nm.chapter, title: nm.title, text: `Go to ${lm(nm.start).name} to start`, idle: true,
+      next: `${CAST[nm.giver].name.split(' ')[0]} has the job  ·  pays $${nm.reward.toLocaleString('en-US')}`, hint: 'Follow the yellow marker on the minimap',
+    };
   }
   const st = def.stages[ms.stage];
-  const info = { chapter: def.chapter, title: def.title, text: st.text, stage: ms.stage, stages: def.stages.length };
+  const after = def.stages[ms.stage + 1];
+  const info = {
+    chapter: def.chapter, title: def.title, text: st.text, stage: ms.stage, stages: def.stages.length,
+    next: after ? after.text : `Payday  ·  $${def.reward.toLocaleString('en-US')}`, hint: st.hint || HINTS[st.type],
+  };
   if (st.type === 'eliminate') {
     const dead = ms.enemies.filter((e) => !e.alive).length;
     info.count = `${dead}/${ms.enemies.length}`;

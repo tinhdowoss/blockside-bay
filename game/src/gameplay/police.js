@@ -1,6 +1,6 @@
 // Wanted level (0-5 stars) and the police response: pursuit and ramming cars, roadblocks at 4+,
 // a helicopter with a searchlight at 3+. Break line of sight long enough and the stars cool down.
-import { WANTED, CELL, GRID_N } from '../core/config.js';
+import { WANTED, CELL, GRID_N, CALL_SIGNS, HELI_SIGN } from '../core/config.js';
 import { nodePos, nearestNode, nodeNeighbors, sightBlocked } from '../world/city.js';
 import { Vehicle, vehicles } from './vehicles.js';
 import { makeHelicopter } from '../world/models.js';
@@ -13,7 +13,7 @@ const THREE = window.THREE;
 export const police = {
   level: 0, evade: 0, seen: false, lastX: 0, lastZ: 0,
   units: [], heli: null, roadblocks: [], roadblockTimer: 6,
-  ramming: false, frozen: false,
+  ramming: false, frozen: false, signs: 0,
 };
 let scene;
 
@@ -52,6 +52,8 @@ export function spawnUnit(x, z, heading) {
   v.siren = true;
   v.keep = true;
   v.ai = { node: nearestNode(x, z), stuck: 0, reverse: 0 };
+  const n = police.signs++;
+  v.callSign = `${CALL_SIGNS[n % CALL_SIGNS.length]}-${1 + Math.floor(n / CALL_SIGNS.length) + (n % 3)}`;
   police.units.push(v);
   return v;
 }
@@ -112,16 +114,26 @@ function steerTo(v, tx, tz, speed, dt) {
   if (fs < 1.5 && c.throttle) { ai.stuck += dt; if (ai.stuck > 1.6) { ai.reverse = 1.2; ai.stuck = 0; } } else ai.stuck = 0;
 }
 
+// What a unit is doing right now: RAMMING (close enough to hit), PURSUIT (has the player in sight and
+// drives straight at them), SEARCHING (routing through the grid towards the last sighting), ROADBLOCK.
+export function unitState(v) {
+  if (v.ai && v.ai.parked) return 'ROADBLOCK';
+  const d = Math.hypot(player.x - v.x, player.z - v.z);
+  if (d < 16) return 'RAMMING';
+  const direct = d < 38 || (Math.abs(player.x - v.x) < 5 || Math.abs(player.z - v.z) < 5) && !sightBlocked(v.x, v.z, player.x, player.z);
+  return direct ? 'PURSUIT' : 'SEARCHING';
+}
+
 function driveUnit(v, dt) {
   if (!v.ai || !v.ai.node) return;
-  const target = player.vehicle || player;
   const px = player.x, pz = player.z;
   const d = Math.hypot(px - v.x, pz - v.z);
   const tvx = player.vehicle ? player.vehicle.vx : 0, tvz = player.vehicle ? player.vehicle.vz : 0;
-  const direct = d < 38 || (Math.abs(px - v.x) < 5 || Math.abs(pz - v.z) < 5) && !sightBlocked(v.x, v.z, px, pz);
-  if (direct) {
+  const state = unitState(v);
+  v.ai.state = state;
+  if (state !== 'SEARCHING') {
     const lead = Math.min(0.8, d / 40);
-    const ram = d < 16;
+    const ram = state === 'RAMMING';
     v.ai.ramming = ram;
     if (!player.vehicle && d < 9) { steerTo(v, px, pz, 2, dt); v.controls.brake = 1; v.controls.throttle = 0; return; }
     steerTo(v, px + tvx * lead, pz + tvz * lead, ram ? v.spec.top * 1.1 : v.spec.top * 0.95, dt);
@@ -140,12 +152,12 @@ function driveUnit(v, dt) {
     const tn = nodePos(v.ai.node.i, v.ai.node.j);
     steerTo(v, tn.x, tn.z, v.spec.top * 0.85, dt);
   }
-  void target;
 }
 
 // ---- Helicopter with searchlight -------------------------------------------------------
 function makeHeli() {
   const mesh = makeHelicopter();
+  mesh.scale.setScalar(1.35);
   scene.add(mesh);
   const spot = new THREE.SpotLight(0xfff4c8, 900, 120, 0.22, 0.4, 1.2);
   scene.add(spot, spot.target);
@@ -167,16 +179,17 @@ function removeHeli() {
   police.heli = null;
 }
 
-export function placeHeli(x, y, z, aimX, aimZ) {
+export function placeHeli(x, y, z, aimX, aimZ, heading) {
   if (!police.heli) police.heli = makeHeli();
   const h = police.heli;
-  h.x = x; h.y = y; h.z = z; h.aimX = aimX; h.aimZ = aimZ;
+  h.x = x; h.y = y; h.z = z; h.aimX = aimX; h.aimZ = aimZ; h.heading = heading;
   syncHeli(h, 0, 0);
 }
 
 function syncHeli(h, t, dt) {
   h.mesh.position.set(h.x, h.y, h.z);
-  h.mesh.rotation.set(0.12, Math.atan2(h.aimX - h.x, h.aimZ - h.z), 0.05);
+  // The body points where it flies (it strafes sideways round the chase); the searchlight turret aims.
+  h.mesh.rotation.set(0.12, h.heading ?? Math.atan2(h.aimX - h.x, h.aimZ - h.z), 0.05);
   h.mesh.userData.rotor.rotation.y += dt * 30;
   h.mesh.userData.tail.rotation.x += dt * 40;
   h.spot.position.set(h.x, h.y - 1.2, h.z);
@@ -195,9 +208,11 @@ function syncHeli(h, t, dt) {
 // the full searchlight look. Called every rendered frame with the camera.
 const BEAM_OPACITY = 0.16, POOL_OPACITY = 0.85, BEAM_R0 = 0.3, BEAM_R1 = 4.2;
 const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
-export function updateHeliGlare(camera) {
+export function updateHeliGlare(camera, night = 0) {
   const h = police.heli;
   if (!h) return;
+  // The lamp is a pale wash in daylight and a hard white disc at night.
+  h.spot.intensity = 250 + 650 * night;
   const ax = h.x, ay = h.y - 1.2, az = h.z;
   const bx = h.aimX - ax, by = -ay, bz = h.aimZ - az;
   const cx = camera.position.x - ax, cy = camera.position.y - ay, cz = camera.position.z - az;
@@ -211,7 +226,7 @@ export function updateHeliGlare(camera) {
   h.beam.visible = k > 0.01;
   // The pool stays as a soft ring on the ground, just never a full-screen flare.
   const near = smooth(4, 16, Math.hypot(camera.position.x - h.aimX, camera.position.z - h.aimZ));
-  h.pool.material.opacity = POOL_OPACITY * (0.45 + 0.55 * Math.max(k, near));
+  h.pool.material.opacity = POOL_OPACITY * (0.45 + 0.55 * Math.max(k, near)) * (0.45 + 0.55 * night);
 }
 
 function updateHeli(dt, t) {
@@ -231,7 +246,12 @@ function updateHeli(dt, t) {
   const ahead = player.camYaw + Math.sin(h.angle) * 0.9;
   const tx = player.x + Math.sin(ahead) * 44, tz = player.z + Math.cos(ahead) * 44;
   const k = Math.min(1, dt * 0.9);
-  h.x += (tx - h.x) * k; h.z += (tz - h.z) * k;
+  const mvx = (tx - h.x) * k, mvz = (tz - h.z) * k;
+  h.x += mvx; h.z += mvz;
+  if (Math.hypot(mvx, mvz) > dt * 2) {
+    const want = Math.atan2(mvx, mvz), cur = h.heading ?? want;
+    h.heading = cur + Math.atan2(Math.sin(want - cur), Math.cos(want - cur)) * Math.min(1, dt * 1.5);
+  }
   h.y += (15 - h.y) * k;
   // The searchlight lags behind the player; it can be shaken off under cover.
   const lag = Math.min(1, dt * 1.8);
@@ -319,15 +339,25 @@ export function updatePolice(dt, t) {
   }
 }
 
-// What the HUD's police-response list shows.
-export function responseList() {
-  if (police.level === 0) return [];
-  const list = [];
-  if (police.ramming) list.push({ label: 'RAMMING', color: '#ff3f5f' });
-  list.push(police.units.length ? { label: `PURSUIT x${police.units.length}`, color: '#3fa0ff' } : { label: 'UNITS EN ROUTE', color: '#3fa0ff' });
-  if (police.heli) list.push({ label: 'SPOTLIGHT', color: '#ffe066' });
-  if (police.roadblocks.length) list.push({ label: 'ROADBLOCK', color: '#ff9a3f' });
-  if (!police.seen) list.push({ label: 'SEARCHING', color: '#bbbbbb' });
-  return list;
+// What the HUD's police-response panel shows: every live unit by call sign, nearest first, with its
+// distance and state; the helicopter; how many units are out and whether the player is in sight.
+export const STATE_COLORS = { RAMMING: '#ff3f5f', PURSUIT: '#4fb0ff', ROADBLOCK: '#ff9a3f', SPOTLIGHT: '#ffe066', SEARCHING: '#b8b0c8' };
+export function responseReport() {
+  if (police.level === 0) return null;
+  const rows = [];
+  for (const v of police.units) if (manned(v)) rows.push({ sign: v.callSign, d: Math.hypot(v.x - player.x, v.z - player.z), state: unitState(v) });
+  for (const rb of police.roadblocks) for (const v of rb.cars) if (manned(v)) rows.push({ sign: v.callSign, d: Math.hypot(v.x - player.x, v.z - player.z), state: 'ROADBLOCK' });
+  const h = police.heli;
+  if (h) {
+    const lit = Math.hypot(h.aimX - player.x, h.aimZ - player.z) < 9;
+    rows.push({ sign: HELI_SIGN, d: Math.hypot(h.x - player.x, h.z - player.z), state: lit ? 'SPOTLIGHT' : 'SEARCHING', air: true });
+  }
+  rows.sort((a, b) => a.d - b.d);
+  const evadeNeed = WANTED.evadeTime[police.level] || 1;
+  return {
+    rows, count: rows.length, seen: police.seen,
+    status: police.seen ? 'IN SIGHT' : rows.length ? 'SEARCHING' : 'UNITS EN ROUTE',
+    evade: police.seen ? 0 : Math.min(1, police.evade / evadeNeed),
+  };
 }
 void CELL;

@@ -5,7 +5,8 @@ import { buildCity, updateCity, city } from '../world/city.js';
 import { setupSky, updateSky, sky, setHour } from '../world/daylight.js';
 import { setupEffects, updateEffects } from '../fx/effects.js';
 import { setupVehicles, updateVehicles, vehicles, Vehicle } from '../gameplay/vehicles.js';
-import { setupPlayer, updatePlayer, updateCamera, placePlayer, player, syncModel, setCameraPose } from '../gameplay/player.js';
+import { setupPlayer, updatePlayer, placePlayer, player, syncModel } from '../gameplay/player.js';
+import { setupCamera, updateCamera, setCameraPose } from '../gameplay/camera.js';
 import { setupInput, endFrame, input, tapped } from './input.js';
 import { populateTraffic, updateTraffic } from '../world/traffic.js';
 import { setupPedestrians, populatePeds, updatePeds, peds } from '../world/pedestrians.js';
@@ -21,6 +22,7 @@ import { setupMenus, showTitle, hideMenus, openPause, menuKey } from '../ui/menu
 import { saveGame, loadGame } from './save.js';
 import { game, on, emit } from './state.js';
 import { stageShot } from '../dev/shots.js';
+import { setupProgression } from '../gameplay/progression.js';
 import { setupPost, resizePost, renderFrame, post } from '../fx/post.js';
 import { loadSettings, applySettings, saveSettings } from './settings.js';
 import { applyGrade } from '../fx/grade.js';
@@ -47,7 +49,8 @@ buildCity(scene);
 setupSky(scene);
 setupEffects(scene);
 setupVehicles(scene);
-setupPlayer(scene, camera);
+setupPlayer(scene);
+setupCamera(camera);
 setupPedestrians(scene);
 setupPolice(scene);
 setupCombat(scene, camera);
@@ -56,6 +59,7 @@ setupDialogue();
 setupHud(camera);
 setupMinimap();
 setupAudioEvents();
+setupProgression();
 setupInput(canvas, onKey);
 setupMenus({ newGame, continueGame, resume, save: (s) => { saveGame(s); emit('toast', { text: `SAVED TO SLOT ${s + 1}`, color: '#5dff6a' }); }, quit: quitToTitle, setting });
 
@@ -102,8 +106,8 @@ export function enterTitle() {
 
 function resetRun() {
   Object.assign(game, {
-    cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false },
-    ammo: { pistol: 60, smg: 0 }, clip: { pistol: 12, smg: 0 }, weapon: 0, missionsDone: [], activeMission: null,
+    cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false },
+    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], activeMission: null,
     stats: { stolen: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, maxStars: 0, cuffed: 0, downed: 0, playSeconds: 0, stunts: 0 },
     skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   });
@@ -270,7 +274,8 @@ function render(dt, now) {
   let sirenD = 999;
   for (const v of vehicles) if (v.siren) sirenD = Math.min(sirenD, Math.hypot(v.x - player.x, v.z - player.z));
   updateAudio(player.vehicle ? player.vehicle.speed : null, player.vehicle ? player.vehicle.spec.top : 1, sirenD);
-  updateHeliGlare(camera);
+  updateHeliGlare(camera, night);
+  if (game.mode !== 'play' && !SHOT) post.speed = 0;
   applyGrade(night, sky.hour);
   renderFrame(scene, camera, now);
 }

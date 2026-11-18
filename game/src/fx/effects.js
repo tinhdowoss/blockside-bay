@@ -1,5 +1,8 @@
-// Particles (smoke, sparks, debris), muzzle flashes, bullet tracers and camera shake.
+// Particles (sparks, debris, blood), muzzle flashes, bullet tracers and camera shake; smoke goes to the
+// soft puff system (smoke.js) and tyre marks to skidmarks.js.
 import { glowTexture } from '../world/textures.js';
+import { setupSmoke, updateSmoke, puff } from './smoke.js';
+import { setupSkidmarks } from './skidmarks.js';
 import { rand } from '../core/rng.js';
 
 const THREE = window.THREE;
@@ -12,6 +15,8 @@ export const fx = { shake: 0 };
 
 export function setupEffects(sc) {
   scene = sc;
+  setupSmoke(sc);
+  setupSkidmarks(sc);
   inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX);
   inst.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 3), 3);
   inst.count = 0;
@@ -35,15 +40,21 @@ export function setupEffects(sc) {
 const col = new THREE.Color();
 export function spawn(x, y, z, vx, vy, vz, life, size, color, opts = {}) {
   if (parts.length >= MAX) parts.shift();
-  parts.push({ x, y, z, vx, vy, vz, life, max: life, size, color: col.set(color).clone(), grow: opts.grow || 0, grav: opts.grav ?? 0 });
+  // hot > 1 pushes the colour past white so the bloom pass makes it glow (sparks, embers).
+  parts.push({ x, y, z, vx, vy, vz, life, max: life, size, color: col.set(color).multiplyScalar(opts.hot || 1).clone(), grow: opts.grow || 0, grav: opts.grav ?? 0 });
 }
 
-export function smoke(x, y, z, color = '#9a9a9a', n = 1) {
-  for (let i = 0; i < n; i++) spawn(x + (rand() - 0.5), y, z + (rand() - 0.5), (rand() - 0.5) * 0.8, 1.2 + rand(), (rand() - 0.5) * 0.8, 1.4, 0.5, color, { grow: 1.2 });
+export function smoke(x, y, z, color = '#9a9a9a', n = 1, opts = {}) {
+  for (let i = 0; i < n; i++) puff(x + (rand() - 0.5) * 0.8, y, z + (rand() - 0.5) * 0.8, { color, ...opts });
+}
+
+// Thick low tyre smoke that rolls out sideways from a sliding wheel.
+export function tyreSmoke(x, z, vx = 0, vz = 0) {
+  puff(x, 0.45, z, { color: '#d9d4d0', vx: vx * 0.15 + (rand() - 0.5) * 2, vy: 0.5 + rand() * 0.5, vz: vz * 0.15 + (rand() - 0.5) * 2, size: 1.3, grow: 3.6, life: 2.4, alpha: 0.42 });
 }
 
 export function sparks(x, y, z, n = 10, color = '#ffd040') {
-  for (let i = 0; i < n; i++) spawn(x, y, z, (rand() - 0.5) * 10, rand() * 6, (rand() - 0.5) * 10, 0.4 + rand() * 0.3, 0.15, color, { grav: 18 });
+  for (let i = 0; i < n; i++) spawn(x, y, z, (rand() - 0.5) * 10, rand() * 6, (rand() - 0.5) * 10, 0.4 + rand() * 0.3, 0.13, color, { grav: 18, hot: 3.2 });
 }
 
 export function blood(x, y, z, n = 8) {
@@ -51,8 +62,8 @@ export function blood(x, y, z, n = 8) {
 }
 
 export function explosion(x, y, z) {
-  for (let i = 0; i < 40; i++) spawn(x, y + 1, z, (rand() - 0.5) * 16, rand() * 12, (rand() - 0.5) * 16, 0.8 + rand() * 0.5, 0.6, i % 2 ? '#ff8a1a' : '#ffd040', { grav: 6, grow: 1 });
-  for (let i = 0; i < 20; i++) smoke(x, y + 2, z, '#3a3a3a');
+  for (let i = 0; i < 40; i++) spawn(x, y + 1, z, (rand() - 0.5) * 16, rand() * 12, (rand() - 0.5) * 16, 0.8 + rand() * 0.5, 0.6, i % 2 ? '#ff8a1a' : '#ffd040', { grav: 6, grow: 1, hot: 2.5 });
+  for (let i = 0; i < 20; i++) smoke(x, y + 2, z, '#3a3a3a', 1, { size: 2.5, grow: 6, life: 3.5, alpha: 0.8, vy: 2 + rand() * 2 });
   fx.shake = Math.max(fx.shake, 1.2);
   flash(x, y + 1, z, 6);
 }
@@ -100,6 +111,7 @@ export function updateEffects(dt) {
   if (flashT > 0) { flashT -= dt; if (flashT <= 0) { flashSprite.visible = false; flashLight.intensity = 0; } }
   for (const t of tracers) if (t.life > 0) { t.life -= dt; if (t.life <= 0) t.line.visible = false; }
   fx.shake = Math.max(0, fx.shake - dt * 2.5);
+  updateSmoke(dt);
 }
 
 // Leaves the last muzzle flash lit (screenshot staging).

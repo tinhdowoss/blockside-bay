@@ -11,8 +11,10 @@ const KEYS = [
   [7, '#3fa7ff', '#ffd2b0', '#ffe0b0', 1.6, 1.0, 0.1],
   [10, '#1f8fff', '#a8e6ff', '#fff4dc', 2.6, 1.35, 0],
   [15, '#1f8fff', '#b0ecff', '#fff0d0', 2.6, 1.35, 0],
-  [18, '#4a6bd8', '#ff9a6b', '#ffb070', 1.7, 1.0, 0.15],
-  [19.5, '#2a2470', '#ff5f8f', '#ff8a6b', 0.8, 0.75, 0.6],
+  [16.5, '#2f7ce8', '#d8dcff', '#ffe0b0', 2.5, 1.2, 0],
+  [17.7, '#3d5cc8', '#ffb27a', '#ffb062', 2.15, 0.9, 0.05],
+  [18.6, '#36309a', '#ff7f6a', '#ff8a4a', 1.8, 0.8, 0.3],
+  [19.5, '#2a2470', '#ff5f8f', '#ff6a6b', 0.8, 0.75, 0.6],
   [21, '#1a1060', '#7a2a9a', '#a8b8ff', 0.5, 0.9, 1],
   [24, '#160c52', '#6a2a8a', '#a8b8ff', 0.45, 0.85, 1],
 ];
@@ -78,7 +80,7 @@ export function updateSky(dt, focus, scene) {
   u.top.value.copy(k.top); u.horizon.value.copy(k.horizon); u.sunCol.value.copy(k.sunCol);
   // Sun arc: rises east (+x, over the ocean), sets west.
   const ang = ((sky.hour - 6) / 12) * Math.PI;
-  const sunDir = new THREE.Vector3(Math.cos(ang) * 0.8, Math.max(Math.sin(ang), 0.25), 0.45).normalize();
+  const sunDir = new THREE.Vector3(Math.cos(ang) * 0.8, Math.max(Math.sin(ang), 0.17), 0.45).normalize();
   if (k.night > 0.5) sunDir.set(-0.4, 0.8, -0.3).normalize(); // moonlight
   u.sunDir.value.copy(sunDir);
   sky.sun.color.copy(k.sunCol);
@@ -92,6 +94,9 @@ export function updateSky(dt, focus, scene) {
   sky.stars.material.opacity = k.night;
   sky.stars.visible = k.night > 0.05;
   scene.fog.color.copy(k.horizon);
+  // Golden hour: the haze closes in so the streets fade into warm light.
+  const golden = Math.max(0, 1 - Math.abs(sky.hour - 18) / 1.6) * (1 - k.night);
+  scene.fog.near = 160 - golden * 110; scene.fog.far = 620 - golden * 300;
   for (const m of city.glowMats) m.emissiveIntensity = k.night * 1.1;
   for (const o of city.nightOnly) o.visible = k.night > 0.3;
   return k.night;

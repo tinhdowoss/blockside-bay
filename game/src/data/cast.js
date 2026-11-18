@@ -6,12 +6,13 @@ export const CAST = {
   mari: { name: 'MARI VEGA', role: 'Planner', skin: '#e0a77a', hair: '#7a2a1a', hairStyle: 'bob', shirt: '#ffd23f', eyes: '#2b1b0b', extra: 'shades' },
   teddy: { name: 'TEDDY BRIX', role: 'Muscle', skin: '#6b4430', hair: '#111111', hairStyle: 'bald', shirt: '#7a5cff', eyes: '#1b1b1b', extra: 'beard' },
   dez: { name: 'DEZ OKORO', role: 'Hacker', skin: '#a8714c', hair: '#3fd0ff', hairStyle: 'spike', shirt: '#222a3a', eyes: '#1b1b1b', extra: 'visor' },
+  pia: { name: 'PIA SOLANO', role: 'Lookout', skin: '#f1c7a0', hair: '#ff8fd0', hairStyle: 'bob', shirt: '#ff7a3d', eyes: '#1b1b1b', extra: 'freckles' },
   ocampo: { name: 'RICO OCAMPO', role: 'Neon Vipers boss', skin: '#d29a6a', hair: '#0d0d0d', hairStyle: 'slick', shirt: '#a020f0', eyes: '#c00000', extra: 'scar' },
   gus: { name: 'AUGUSTINE SALT', role: 'Saltwater Kings', skin: '#f1c7a0', hair: '#e8e8e8', hairStyle: 'slick', shirt: '#f4f4f4', eyes: '#2a4a8a', extra: 'shades' },
   dispatch: { name: 'BBPD DISPATCH', role: 'Police radio', skin: '#3a4a6a', hair: '#1a2440', hairStyle: 'cap', shirt: '#1d3c8f', eyes: '#ffffff', extra: 'headset' },
 };
 
-export const CREW = ['kai', 'jolie', 'mari', 'teddy', 'dez'];
+export const CREW = ['kai', 'jolie', 'mari', 'teddy', 'dez', 'pia'];
 
 // Paints a portrait into a 16x16 area of ctx at (ox, oy) with pixel size s.
 export function paintPortrait(ctx, id, ox = 0, oy = 0, s = 1, bg = null) {
@@ -52,6 +53,7 @@ export function paintPortrait(ctx, id, ox = 0, oy = 0, s = 1, bg = null) {
     case 'beard': px(4, 9, 8, 3, '#1a1a1a'); px(6, 10, 4, 1, '#7a2a2a'); break;
     case 'visor': px(4, 5, 8, 2, '#3fd0ff'); px(5, 5, 2, 1, '#bff4ff'); break;
     case 'scar': px(10, 4, 1, 4, '#ffffff'); px(5, 9, 6, 1, shade(c.skin, -0.25)); break;
+    case 'freckles': px(5, 8, 1, 1, '#c9805a'); px(10, 8, 1, 1, '#c9805a'); px(6, 9, 1, 1, '#c9805a'); px(9, 9, 1, 1, '#c9805a'); break;
     case 'headset': px(3, 4, 1, 5, '#222'); px(12, 4, 1, 5, '#222'); px(11, 9, 2, 1, '#222'); break;
     default: break;
   }

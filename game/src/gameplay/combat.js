@@ -147,6 +147,21 @@ export function playerFire(t) {
   if (game.clip[w.id] <= 0) { reload(); emit('dryfire'); return; }
   game.clip[w.id]--;
   game.stats.shots++;
+  const muzzle = muzzlePos();
+  flash(muzzle.x, muzzle.y, muzzle.z, w.id === 'smg' ? 1.2 : w.pellets ? 2.1 : 1.5);
+  fx.shake = Math.max(fx.shake, w.id === 'smg' ? 0.08 : w.pellets ? 0.32 : 0.15);
+  emit('gunshot', { x: player.x, z: player.z, weapon: w.id, by: 'player' });
+  // The scatter gun fires a fan of pellets; every other gun one ray.
+  let landed = false;
+  for (let k = 0; k < (w.pellets || 1); k++) landed = fireRay(w, muzzle) || landed;
+  if (landed) { game.stats.hits++; bumpSkill('shooting', 0.003); }
+  // Shooting where cops can see is a crime.
+  if (police.level === 0 && copsNear(45)) addWanted(1);
+  void t;
+}
+
+// One bullet or pellet from the camera along the crosshair (plus spread). Returns true on a character hit.
+function fireRay(w, muzzle) {
   camera.getWorldDirection(_d);
   _d.x += (rand() - 0.5) * w.spread * 2; _d.y += (rand() - 0.5) * w.spread * 2; _d.z += (rand() - 0.5) * w.spread * 2;
   _d.normalize();
@@ -157,24 +172,19 @@ export function playerFire(t) {
   const hc = rayCharacters(_o, _d, maxD);
   const hv = rayVehicles(_o, _d, Math.min(maxD, hc.t));
   const end = Math.min(maxD, hc.t, hv.t);
-  const muzzle = muzzlePos();
-  flash(muzzle.x, muzzle.y, muzzle.z, w.id === 'smg' ? 1.2 : 1.5);
   const hit = _o.clone().addScaledVector(_d, end === Infinity ? w.range : end);
   tracer(muzzle, hit);
-  fx.shake = Math.max(fx.shake, w.id === 'smg' ? 0.08 : 0.15);
-  emit('gunshot', { x: player.x, z: player.z, weapon: w.id, by: 'player' });
   if (hc.target && hc.t <= end) {
-    game.stats.hits++;
-    bumpSkill('shooting', 0.003);
     damageCharacter(hc.target, hc.head ? 999 : w.damage, hc.head, player.x, player.z, hit);
-  } else if (hv.v && hv.t <= end) {
+    sparks(hit.x, hit.y, hit.z, 5, '#ffe9a0');
+    return true;
+  }
+  if (hv.v && hv.t <= end) {
     hv.v.damage(w.damage * 0.35);
-    sparks(hit.x, hit.y, hit.z, 6);
+    sparks(hit.x, hit.y, hit.z, 10);
     if (hv.v.police) addWanted(1);
-  } else if (end < Infinity) sparks(hit.x, hit.y, hit.z, 4, '#dddddd');
-  // Shooting where cops can see is a crime.
-  if (police.level === 0 && copsNear(45)) addWanted(1);
-  void t;
+  } else if (end < Infinity) sparks(hit.x, hit.y, hit.z, 6, '#fff0c0');
+  return false;
 }
 
 function copsNear(r) {
@@ -195,6 +205,7 @@ export function damageCharacter(c, dmg, head, fromX, fromZ, at) {
       c.deadT = 0;
       c.fallDir = Math.atan2(c.x - fromX, c.z - fromZ);
       game.stats.kills++;
+      c.headshot = head;
       if (head) {
         game.stats.headshots++;
         addCash(HEADSHOT_BONUS);
@@ -291,7 +302,7 @@ export function updateCombat(dt, t) {
   if (reloadT > 0) reloadT -= dt;
   if (tapped('Tab') || tapped('KeyQ')) cycleWeapon(1);
   if (input.wheel) cycleWeapon(input.wheel > 0 ? 1 : -1);
-  for (const [k, i] of [['Digit1', 0], ['Digit2', 1], ['Digit3', 2]]) {
+  for (const [k, i] of [['Digit1', 0], ['Digit2', 1], ['Digit3', 2], ['Digit4', 3]]) {
     if (!tapped(k)) continue;
     if (game.weapons[WEAPONS[i].id]) { game.weapon = i; reloadT = 0; emit('weapon', WEAPONS[i]); continue; }
     // Story weapons unlock through missions: say which chapter instead of silently ignoring the key.

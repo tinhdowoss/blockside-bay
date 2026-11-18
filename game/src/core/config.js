@@ -50,7 +50,16 @@ export const WEAPONS = [
   { id: 'fists', name: 'FISTS', icon: 'FIST', damage: 18, range: 2.4, rate: 0.38, auto: false, clip: 0, spread: 0 },
   { id: 'pistol', name: 'PISTOL', icon: 'PSTL', damage: 34, range: 90, rate: 0.26, auto: false, clip: 12, spread: 0.012 },
   { id: 'smg', name: 'SMG', icon: 'SMG', damage: 20, range: 70, rate: 0.085, auto: true, clip: 30, spread: 0.035 },
+  { id: 'pump', name: 'SCATTER', icon: 'PUMP', damage: 16, range: 34, rate: 0.75, auto: false, clip: 6, spread: 0.07, pellets: 7 },
 ];
+
+// Street reputation: XP needed for each level and the title it earns.
+export const REP_LEVELS = [0, 300, 800, 1500, 2500, 3800, 5500, 7600, 10200, 13500];
+export const REP_TITLES = ['FRESH OUT', 'CORNER RAT', 'WHEEL HAND', 'BAY HUSTLER', 'NEON NAME', 'PIER BOSS', 'SALT SHAKER', 'BAY LEGEND', 'SUNSET KING', 'OWNER OF THE BAY'];
+
+// Original BBPD call signs, handed out to pursuit units in order.
+export const CALL_SIGNS = ['CORAL', 'MARLIN', 'PELICAN', 'TARPON', 'HERON', 'SNAPPER', 'IBIS', 'GROUPER'];
+export const HELI_SIGN = 'SKYEYE 9';
 
 export const PLAYER = {
   walk: 5.2, sprint: 9.5, radius: 0.5, maxHealth: 100, maxArmor: 100,

@@ -51,9 +51,9 @@ void main(){
   vec3 c = texture2D(tScene, uv).rgb;
   if (speed > 0.001) {
     // Radial motion blur towards the edges plus thin bright streaks rushing outwards.
-    float e = smoothstep(0.12, 0.62, length(d * aspect));
+    float e = smoothstep(0.3, 0.8, length(d * aspect));
     vec3 acc = c;
-    for (int i = 1; i < 6; i++) acc += texture2D(tScene, uv - d * float(i) * 0.014 * speed).rgb;
+    for (int i = 1; i < 6; i++) acc += texture2D(tScene, uv - d * float(i) * 0.006 * speed).rgb;
     c = mix(c, acc / 6.0, e);
     float ang = atan(d.y, d.x);
     float lane = floor(ang * 38.0);
@@ -61,7 +61,7 @@ void main(){
     float r = length(d * aspect);
     float run = fract(r * 2.6 - time * (2.2 + hash(lane) * 1.8) + hash(lane * 9.1));
     float streak = on * smoothstep(0.55, 1.0, run) * smoothstep(0.3, 0.62, r) * (1.0 - abs(fract(ang * 38.0) - 0.5) * 2.0);
-    c += vec3(0.9, 0.95, 1.0) * streak * speed * 0.55;
+    c += vec3(1.0, 0.95, 0.85) * streak * speed * 0.7;
   }
   vec3 b = texture2D(tBloomA, uv).rgb * 0.75 + texture2D(tBloomB, uv).rgb;
   c = c * exposure + b * bloom;

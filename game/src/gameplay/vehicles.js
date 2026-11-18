@@ -2,7 +2,8 @@
 import { CAR_MODELS } from '../core/config.js';
 import { makeCar } from '../world/models.js';
 import { collideCircle } from '../world/city.js';
-import { sparks, smoke, explosion, fx } from '../fx/effects.js';
+import { sparks, smoke, tyreSmoke, explosion, fx } from '../fx/effects.js';
+import { skidCar } from '../fx/skidmarks.js';
 import { emit } from '../core/state.js';
 import { pick } from '../core/rng.js';
 
@@ -86,8 +87,13 @@ export class Vehicle {
     // Body roll / pitch for feel
     this.roll += ((vs * 0.03 + this.yawRate * Math.abs(vf) * 0.004) - this.roll) * Math.min(1, dt * 6);
     this.pitch += ((c.brake > 0 && vf > 2 ? 0.04 : c.throttle > 0 ? -0.025 : 0) - this.pitch) * Math.min(1, dt * 5);
-    if (this.drift > 4 && this.speed > 10) smoke(this.x - nfx * 2, 0.3, this.z - nfz * 2, '#e8e8e8');
-    if (this.health < 35 && !this.wrecked && Math.random() < 0.3) smoke(this.x + nfx * 1.8, 1.2, this.z + nfz * 1.8, '#555555');
+    // Tyres: sliding sideways, locked up under the handbrake or braking hard all leave rubber and smoke.
+    const slide = Math.max(0, this.drift - 2.5) / 6;
+    const lock = (c.handbrake || c.brake > 0.5) && vf > 9 ? 0.6 : 0;
+    const skid = Math.min(1, Math.max(slide, lock)) * (this.speed > 6 ? 1 : 0);
+    skidCar(this, skid);
+    if (skid > 0.25 && Math.random() < skid * 0.9) tyreSmoke(this.x - nfx * s.len * 0.32, this.z - nfz * s.len * 0.32, this.vx, this.vz);
+    if (this.health < 35 && !this.wrecked && Math.random() < 0.3) smoke(this.x + nfx * 1.8, 1.2, this.z + nfz * 1.8, this.health < 15 ? '#2a2a2a' : '#666666', 1, { size: 0.8, grow: 2.5 });
     if (this.health <= 0 && !this.wrecked) this.wreck();
     this.sync(t);
   }

@@ -4,7 +4,8 @@ import { CELL } from '../core/config.js';
 import { city } from '../world/city.js';
 import { setHour, sky } from '../world/daylight.js';
 import { Vehicle, vehicles } from '../gameplay/vehicles.js';
-import { player, placePlayer, setCameraPose, syncModel } from '../gameplay/player.js';
+import { player, placePlayer, syncModel } from '../gameplay/player.js';
+import { setCameraPose, speedRush } from '../gameplay/camera.js';
 import { stealVehicle } from '../gameplay/carjack.js';
 import { police, setWanted, spawnUnit, placeHeli, placeRoadblockAt } from '../gameplay/police.js';
 import { spawnShooter, shooters } from '../gameplay/combat.js';
@@ -13,9 +14,14 @@ import { MISSIONS } from '../data/missions-data.js';
 import { showLine } from '../ui/dialogue.js';
 import { setStation, setRadioPlaying } from '../audio/radio.js';
 import { holdPopup, clearCenterText } from '../ui/hud.js';
-import { flash, holdFlash, tracer, smoke, sparks, spawn } from '../fx/effects.js';
+import { flash, holdFlash, tracer, sparks, spawn, tyreSmoke, updateEffects } from '../fx/effects.js';
+import { agePuffs } from '../fx/smoke.js';
+import { skidCar } from '../fx/skidmarks.js';
+import { post } from '../fx/post.js';
 import { spawnTrafficOn } from '../world/traffic.js';
-import { spawnPed, peds, removePed } from '../world/pedestrians.js';
+import { spawnPed, peds, removePed, posePed } from '../world/pedestrians.js';
+import { WEAPONS } from '../core/config.js';
+import { repFromStory } from '../gameplay/progression.js';
 import { game } from '../core/state.js';
 import { saveGame } from '../core/save.js';
 
@@ -35,18 +41,51 @@ function ready(api) {
   setTimeout(() => { settle(api, 2); window.__shotReady = true; }, 900);
 }
 
+// A pedestrian at an exact spot in a given state (walk / flee / cower), posed by the game's own rig.
+function stagePed(x, z, state, yaw, phase) {
+  const p = spawnPed(Math.floor(x / CELL), Math.floor(z / CELL), 0);
+  Object.assign(p, { x, z, state, yaw, phase, spd: state === 'flee' ? 6.5 : state === 'walk' ? 1.6 : 0, fleeT: 9, keep: true });
+  posePed(p);
+  return p;
+}
+
+// Rubber laid by a car that slid along an S-curve ending at (x, z), heading north (-z).
+function layTrail(v, x, z, sway, strength) {
+  v.skidPrev = null;
+  for (let k = 22; k >= 0; k--) {
+    const t = k / 22;
+    v.x = x + Math.sin(t * Math.PI * 1.2) * sway; v.z = z + 2.2 + t * 24;
+    v.heading = Math.PI + Math.cos(t * Math.PI * 1.2) * sway * 0.12;
+    skidCar(v, strength * (0.4 + 0.6 * (1 - t)));
+  }
+  v.skidPrev = null;
+}
+
+// The save state of a player who has finished the first `done` story missions.
+function progress(done, extra = {}) {
+  game.missionsDone = MISSIONS.slice(0, done).map((m) => m.id);
+  for (const m of MISSIONS.slice(0, done)) if (m.unlock) {
+    const w = WEAPONS.find((q) => q.id === m.unlock);
+    game.weapons[m.unlock] = true; game.clip[m.unlock] = w.clip; game.ammo[m.unlock] = w.clip * 5;
+  }
+  game.rep = repFromStory(done);
+  Object.assign(game, extra);
+}
+
 const SCENES = {
-  // Cover: noon pursuit on a palm avenue in Neon Mile, four cruisers, helicopter searchlight, roadblock ahead.
+  // Cover: golden-hour pursuit down a palm avenue in Neon Mile - four cruisers ramming, a roadblock at the
+  // junction, the SKYEYE helicopter's searchlight on the pink Coralline, people diving off the sidewalks.
   chase(api) {
-    setHour(12.6); sky.fixed = true;
+    setHour(18.05); sky.fixed = true;
     const X = 4 * CELL + 3, Z = 2 * CELL + 30;
     clearStreet(X - 30, Z - 140, X + 30, Z + 60);
     api.startPlaying(X, Z + 5);
     const car = new Vehicle('coralline', X, Z, Math.PI, '#ff4fa3');
     stealVehicle(car, true);
-    car.vx = 0; car.vz = -31; car.heading = Math.PI + 0.06; car.roll = -0.03;
-    game.cash = 184250; game.health = 78; game.armor = 60; game.weapon = 1;
-    game.missionsDone = MISSIONS.slice(0, 6).map((m) => m.id);
+    // Lay real rubber: drive the car (and a cruiser) back along the S-curve they just slid through.
+    layTrail(car, X, Z, 1.6, 0.9);
+    car.x = X; car.z = Z; car.vx = 2.2; car.vz = -31; car.heading = Math.PI + 0.1; car.roll = -0.035; car.health = 64;
+    progress(6, { cash: 184250, health: 78, armor: 60, weapon: 2, rep: 5200 });
     startMission(MISSIONS[6], 2);
     ms.timer = 107;
     setWanted(4);
@@ -56,25 +95,40 @@ const SCENES = {
       spawnUnit(X - 4.0, Z - 9, Math.PI + 0.35),
       spawnUnit(X + 0.6, Z + 11, Math.PI - 0.04),
     ];
+    layTrail(units[1], X + 3.4, Z + 5.2, -1.2, 0.6);
     units.forEach((u, i) => { u.vz = -30; u.sync(i % 2 ? 0.07 : 0.2); });
-    police.ramming = true; police.seen = true;
+    units[1].x = X + 3.4; units[1].z = Z + 5.2; units[1].heading = Math.PI + 0.12;
+    police.seen = true;
     placeRoadblockAt(4 * CELL, 2 * CELL, false);
     police.roadblocks[0].cars.forEach((c, i) => c.sync(0.07 + i * 0.13));
-    placeHeli(X - 9, 17, Z - 38, X - 0.5, Z + 0.5);
+    placeHeli(X + 3.2, 12.2, Z - 17, X + 0.4, Z - 0.5, Math.PI / 2 + 0.5);
     spawnTrafficOn({ i: 4, j: 1 }, { i: 4, j: 2 }, 0.45, 'palomar');
     spawnTrafficOn({ i: 3, j: 2 }, { i: 4, j: 2 }, 0.75, 'bayrunner', '#a6e3ff');
     spawnTrafficOn({ i: 5, j: 2 }, { i: 4, j: 2 }, 0.8, 'cruza', '#3fd0ff');
     for (const v of vehicles) v.sync(0.07);
-    for (let i = 0; i < 14; i++) smoke(X + (i % 2 ? 1 : -1), 0.4 + i * 0.05, Z + 3 + i * 0.6, '#f0f0f0');
-    sparks(X - 1.4, 0.8, Z + 4, 18);
-    for (const s of [0, 1, 2]) spawnPed(4, 1, 1.4 + s * 0.15);
-    for (const s of [0, 1]) spawnPed(3, 1, 3.4 + s * 0.1);
+    // Tyre smoke boiling off the Coralline's rear wheels and the cruiser beside it, plus ram sparks.
+    for (let i = 0; i < 10; i++) tyreSmoke(X + (i % 2 ? 1.1 : -1.1) - i * 0.12, Z + 2.4 + i * 0.6, 1.5, 0);
+    for (let i = 0; i < 4; i++) tyreSmoke(X + 3.4 + (i % 2 ? 1 : -1), Z + 7.8 + i * 0.6, 0, 0);
+    agePuffs((i) => 0.15 + (i % 10) / 10 * 0.6);
+    sparks(X - 1.4, 0.8, Z + 3.4, 26);
+    sparks(X + 1.6, 0.7, Z + 4.4, 14);
+    // People on both sidewalks scattering from the chase.
+    const W = 4 * CELL - 7.6, E = 4 * CELL + 7.6;
+    const crowd = [
+      [E + 0.4, Z - 3, 'flee', 0.5], [E + 1.6, Z - 7.5, 'cower', -2.4], [E + 0.2, Z - 12, 'flee', 0.9], [E + 1.2, Z - 17, 'flee', 2.6],
+      [E - 0.2, Z - 25, 'flee', 1.4], [E + 2.0, Z - 31, 'walk', 3.1],
+      [W - 0.3, Z - 1.5, 'flee', -0.6], [W - 1.4, Z - 6.5, 'cower', 2.2], [W + 0.2, Z - 11, 'flee', -1.1], [W - 0.8, Z - 16, 'flee', -2.7],
+      [W - 0.2, Z - 23, 'flee', -1.3], [W - 1.6, Z - 29, 'cower', 1.8], [W - 0.5, Z - 36, 'walk', 0],
+    ];
+    crowd.forEach(([x, z, st, yaw], i) => stagePed(x, z, st, yaw, i * 1.7));
     setStation(0); setRadioPlaying(true);
     showLine('mari', "You've got the whole BBPD on your bumper. Lose them before the yacht leaves Coral Pier!");
     player.camYaw = Math.PI;
     player.model.visible = false;
+    post.speed = speedRush(car) * 0.85;
     clearCenterText();
-    setCameraPose(X + 0.9, 5.6, Z + 12.5, X - 0.6, 2.0, Z - 16);
+    setCameraPose(X + 1.6, 5.2, Z + 13.5, X - 0.8, 2.6, Z - 16);
+    updateEffects(0);
     api.loop.freeze(true);
     ready(api);
   },

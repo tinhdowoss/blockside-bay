@@ -4,6 +4,14 @@ import { game, completion } from './state.js';
 import { player } from '../gameplay/player.js';
 import { sky } from '../world/daylight.js';
 import { districtAt } from '../world/city.js';
+import { repFromStory } from '../gameplay/progression.js';
+import { MISSIONS } from '../data/missions-data.js';
+
+// Chapter + title of the next story mission, shown on CONTINUE and the save cards.
+function chapterNow() {
+  const m = MISSIONS.find((q) => !game.missionsDone.includes(q.id));
+  return m ? `CH ${m.chapter} ${m.title}` : 'STORY COMPLETE';
+}
 
 const store = () => { try { return window.localStorage; } catch { return null; } };
 
@@ -12,6 +20,7 @@ export function saveGame(slot = game.slot) {
     v: 1, savedAt: Date.now(),
     cash: game.cash, health: game.health, armor: game.armor,
     weapons: game.weapons, ammo: game.ammo, clip: game.clip, weapon: game.weapon,
+    rep: game.rep, chapter: chapterNow(),
     missionsDone: game.missionsDone, stats: game.stats, skills: game.skills, radioStation: game.radioStation,
     hour: sky.hour, x: player.x, z: player.z,
     pct: completion(), place: districtAt(player.x, player.z).name,
@@ -42,6 +51,7 @@ export function loadGame(slot) {
   Object.assign(game, {
     cash: d.cash, health: Math.max(60, d.health), armor: d.armor,
     weapons: { ...game.weapons, ...d.weapons }, ammo: { ...game.ammo, ...d.ammo }, clip: { ...game.clip, ...d.clip },
+    rep: d.rep ?? repFromStory(d.missionsDone.length),
     weapon: d.weapon || 0, missionsDone: [...d.missionsDone], stats: { ...game.stats, ...d.stats }, skills: { ...game.skills, ...d.skills },
     radioStation: d.radioStation || 0, slot,
   });
