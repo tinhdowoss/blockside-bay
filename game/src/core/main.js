@@ -290,10 +290,7 @@ function render(dt, now) {
     setCameraPose(SHOWCASE.x - 9 + Math.sin(a) * 2, 2.6, SHOWCASE.z + 7 + Math.cos(a) * 1.5, SHOWCASE.x - 1.5, 1.6, SHOWCASE.z - 1);
   } else if (game.mode !== 'title' && !frozen) updateCamera(dt, now);
   if (game.mode === 'play' || game.mode === 'down' || SHOT) { updateHud(dt, now); drawMinimap(t); }
-  let sirenD = 999;
-  for (const v of vehicles) if (v.siren) sirenD = Math.min(sirenD, Math.hypot(v.x - player.x, v.z - player.z));
-  const pv = player.vehicle;
-  updateAudio(pv ? pv.speed : null, pv ? pv.spec.top : 1, sirenD, pv ? pv.skid || 0 : 0);
+  updateAudio(dt, camera);
   updateHeliGlare(camera, night);
   if (game.mode !== 'play' && !SHOT) post.speed = 0;
   // A hit flashes the vignette red for a moment.

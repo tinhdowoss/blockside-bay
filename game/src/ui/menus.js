@@ -12,7 +12,7 @@ import { ms, nextMission } from '../gameplay/missions.js';
 import { listSlots, latestSlot } from '../core/save.js';
 import { game, completion } from '../core/state.js';
 import { sky } from '../world/daylight.js';
-import { blip } from '../audio/radio.js';
+import { blip, uiClick, uiHover } from '../audio/radio.js';
 import { repLevel } from '../gameplay/progression.js';
 
 let root, actions = {}, titleSel = 0, pauseTab = 'map', pauseSel = 0, titleItems = [];
@@ -77,8 +77,8 @@ function renderTitleMenu() {
   if (!m) return;
   m.innerHTML = titleItems.map((it, i) => `<div class="btn ${i === titleSel ? 'sel' : ''}" data-i="${i}">${it.label}<small>${it.sub}</small></div>`).join('');
   m.querySelectorAll('.btn').forEach((b) => {
-    b.onmouseenter = () => { titleSel = +b.dataset.i; renderTitleMenu(); };
-    b.onclick = () => { blip(); titleItems[+b.dataset.i].act(); };
+    b.onmouseenter = () => { if (titleSel !== +b.dataset.i) uiHover(); titleSel = +b.dataset.i; renderTitleMenu(); };
+    b.onclick = () => { uiClick(); titleItems[+b.dataset.i].act(); };
   });
 }
 
@@ -117,8 +117,8 @@ function renderPause() {
     <div class="top"><span class="brand">${GAME_TITLE}</span>${TABS.map((t) => `<span class="tab btn ${t === pauseTab ? 'sel' : ''}" data-t="${t}">${t.toUpperCase()}</span>`).join('')}
       <div class="info"><b>$${game.cash.toLocaleString('en-US')}</b><br>${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}  ·  ${'&#9733;'.repeat(police.level)}${'&#9734;'.repeat(5 - police.level)}</div></div>
     <div class="body">${pauseBody()}</div></div>`;
-  root.querySelectorAll('.tab').forEach((t) => { t.onclick = () => { blip(); pauseTab = t.dataset.t; renderPause(); }; });
-  root.querySelectorAll('[data-act]').forEach((b) => { b.onclick = () => { blip(); doAction(b.dataset.act); }; });
+  root.querySelectorAll('.tab').forEach((t) => { t.onclick = () => { uiClick(); pauseTab = t.dataset.t; renderPause(); }; t.onmouseenter = () => uiHover(); });
+  root.querySelectorAll('[data-act]').forEach((b) => { b.onclick = () => { uiClick(); doAction(b.dataset.act); }; b.onmouseenter = () => uiHover(); });
   root.querySelectorAll('[data-save]').forEach((b) => { b.onclick = () => { actions.save(+b.dataset.save); renderPause(); }; });
   if (pauseTab === 'map') drawPauseMap(root.querySelector('#pausemap'));
   bindSettings(root);

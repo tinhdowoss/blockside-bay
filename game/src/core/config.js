@@ -80,6 +80,7 @@ export const STATIONS = [
   { id: 'wave', name: 'WAVE 88.1', tag: 'Synth sunsets', color: '#ff5fa2', bpm: 104, root: 45, scale: [0, 3, 5, 7, 10], style: 'synth' },
   { id: 'reef', name: 'REEF RADIO 102', tag: 'Bay bass & palms', color: '#2ee6c8', bpm: 122, root: 41, scale: [0, 2, 4, 7, 9], style: 'house' },
   { id: 'cumbia', name: 'CARACOL 95.5', tag: 'Tropical brass', color: '#ffd23f', bpm: 96, root: 50, scale: [0, 2, 4, 5, 7, 9], style: 'tropical' },
+  { id: 'lowtide', name: 'LOW TIDE 79.3', tag: 'Late-night keys & dust', color: '#9b8cff', bpm: 82, root: 48, scale: [0, 2, 3, 5, 7, 9, 10], style: 'lofi' },
   { id: 'off', name: 'RADIO OFF', tag: '', color: '#8a8a8a', style: 'off' },
 ];
 
