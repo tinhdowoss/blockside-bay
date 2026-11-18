@@ -167,6 +167,10 @@ export function updateMissions(dt, t) {
 function animateMarker(m, t) {
   m.userData.chev.position.y = 7.2 + Math.sin(t * 3) * 0.4;
   m.userData.chev.rotation.y = t * 2;
+  // The beam pulses gently and thins out when the player stands right next to it.
+  const d = Math.hypot(m.position.x - player.x, m.position.z - player.z);
+  if (m.userData.beam) m.userData.beam.material.opacity = (0.35 + 0.15 * Math.sin(t * 2.4)) * Math.min(1, 0.25 + d / 30);
+  if (m.userData.pool) m.userData.pool.scale.setScalar(1 + 0.12 * Math.sin(t * 3));
 }
 
 // What the HUD mission panel shows.

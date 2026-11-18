@@ -4,6 +4,7 @@ import { makeRng } from '../core/rng.js';
 import { Batcher } from './voxel.js';
 import * as TX from './textures.js';
 import { registerGlow } from '../fx/grade.js';
+import { buildWater, updateWater } from './water.js';
 
 const THREE = window.THREE;
 const HALF_ROAD = ROAD_W / 2;
@@ -23,6 +24,7 @@ export const city = {
   water: null,
   landmarks: {},
   streetLights: [],
+  buildings: [],      // {cx,cz,w,d,h,kind,pi,bx,bz} for storefronts, billboards and the like
 };
 
 export const districtAt = (x, z) => {
@@ -157,7 +159,7 @@ function rayAabb(ox, oy, oz, dx, dy, dz, c) {
 
 // ---- Build -------------------------------------------------------------------------------
 let B; // Batcher in use while building
-const mats = {};
+export const mats = {};
 function lambert(opts) { return new THREE.MeshLambertMaterial(opts); }
 
 function setupMaterials() {
@@ -199,6 +201,7 @@ function building(cx, cz, w, d, floors, pi, kind, rnd) {
   const pal = PALETTES[pi];
   const h = floors * 4;
   const wk = wallMat(pi, kind);
+  city.buildings.push({ cx, cz, w, d, h, kind, pi, bx: Math.floor(cx / CELL), bz: Math.floor(cz / CELL) });
   B.box(wk, cx, h / 2, cz, w, h, d, { uv: 8, top: 'roof' });
   addCollider(cx - w / 2, cx + w / 2, cz - d / 2, cz + d / 2, h);
   if (kind === 'warehouse') {
@@ -499,8 +502,8 @@ function buildGroundAndCoast(rnd) {
     B.box('vc', x, 4.7, z, 3.6, 0.4, 3.6, { color: '#2ee6c8' });
     addCollider(x - 1.5, x + 1.5, z - 1.5, z + 1.5, 4.9);
   }
-  // Foam line
-  B.box('vc', OCEAN_X + 2, 0.02, (landZ0 + landZ1) / 2, 2.2, 0.06, landZ1 - landZ0, { color: '#ffffff' });
+  // Wet sand along the waterline (the foam itself is drawn by the water shader).
+  B.box('vc', OCEAN_X + 5.5, 0.01, (landZ0 + landZ1) / 2, 5, 0.04, landZ1 - landZ0, { color: '#d9b77a' });
 }
 
 function buildPier(rnd) {
@@ -535,27 +538,6 @@ function buildPier(rnd) {
   void rnd;
 }
 
-function buildClouds(rnd) {
-  for (let i = 0; i < 26; i++) {
-    const x = -300 + rnd() * 1100, z = -300 + rnd() * 1000, y = 95 + rnd() * 40;
-    const parts = 3 + Math.floor(rnd() * 4);
-    for (let p = 0; p < parts; p++) {
-      B.box('cloud', x + (rnd() - 0.5) * 30, y + rnd() * 4, z + (rnd() - 0.5) * 16, 12 + rnd() * 18, 4 + rnd() * 4, 8 + rnd() * 10, { uv: 0 });
-    }
-  }
-}
-
-function buildWater() {
-  const tex = TX.waterTexture().clone();
-  tex.needsUpdate = true;
-  tex.repeat.set(220, 220);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(3600, 3600), new THREE.MeshLambertMaterial({ map: tex, color: '#ffffff' }));
-  water.rotation.x = -Math.PI / 2;
-  water.position.set(CITY_SIZE / 2, -0.35, CITY_SIZE / 2);
-  water.receiveShadow = true;
-  city.group.add(water);
-  city.water = water;
-}
 
 function buildNightPools() {
   const mat = new THREE.MeshBasicMaterial({ map: TX.glowTexture('#ffcf80'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.55 });
@@ -597,18 +579,15 @@ export function buildCity(scene) {
   buildRoads();
   for (let bx = 0; bx < GRID_N; bx++) for (let bz = 0; bz < GRID_N; bz++) buildBlock(bx, bz, rnd);
   buildPier(rnd);
-  buildClouds(rnd);
   city.group.add(B.build(true));
-  // Clouds should not cast giant shadows over the whole city.
-  city.group.traverse((o) => { if (o.isMesh && o.material === mats.cloud) { o.castShadow = false; o.receiveShadow = false; } });
-  buildWater();
+  city.water = buildWater(city.group);
   buildNightPools();
   defineLandmarks();
   return city;
 }
 
-export function updateCity(t, night) {
-  if (city.water) { city.water.material.map.offset.x = t * 0.02; city.water.material.map.offset.y = Math.sin(t * 0.3) * 0.05; }
+export function updateCity(t, night, focus = { x: CITY_SIZE / 2, z: CITY_SIZE / 2 }) {
+  updateWater(t, focus);
   for (const n of city.neon) {
     const flick = 0.75 + 0.25 * Math.sin(t * 3 + n.phase) + (Math.sin(t * 23 + n.phase * 5) > 0.97 ? -0.4 : 0);
     n.halo.material.opacity = (0.25 + night * 0.6) * flick;

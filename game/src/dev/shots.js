@@ -24,8 +24,13 @@ import { WEAPONS } from '../core/config.js';
 import { repFromStory } from '../gameplay/progression.js';
 import { game } from '../core/state.js';
 import { saveGame } from '../core/save.js';
+import { furnitureClear } from '../world/furniture.js';
 
 const THREE = window.THREE;
+
+// Runs at import time, before main.js builds the city: keep the chase camera's corner free of the
+// traffic-signal post that would otherwise fill the right third of the frame.
+if (new URLSearchParams(location.search).get('shot') === 'chase') furnitureClear.push([199, 137, 4]);
 
 function clearStreet(x0, z0, x1, z1) {
   for (const v of [...vehicles]) if (v.x > x0 && v.x < x1 && v.z > z0 && v.z < z1) v.remove();

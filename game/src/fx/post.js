@@ -13,6 +13,12 @@ export const post = {
   vignette: 0.32,
   speed: 0,            // 0..1 speed streaks (set by the camera)
   warm: 0,             // 0..1 warm grade (sunset/sunrise)
+  filmic: 0.5,         // 0 = soft highlight shoulder, 1 = full ACES filmic tone curve
+  contrast: 1.04,
+  lift: [0, 0, 0],     // shadow tint added in the grade (time of day)
+  gain: [1, 1, 1],     // highlight tint multiplied in the grade
+  vigTint: [1, 1, 1],  // colour the vignette falls off to (deep violet at night)
+  aberr: 0,            // extra lens fringing (pain flash)
 };
 
 const VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
@@ -37,18 +43,31 @@ void main(){
 
 const COMPOSITE = `uniform sampler2D tScene; uniform sampler2D tBloomA; uniform sampler2D tBloomB;
 uniform float bloom; uniform float exposure; uniform float sat; uniform float vignette; uniform float speed; uniform float warm; uniform float time;
+uniform float filmic; uniform float contrast; uniform vec3 lift; uniform vec3 gain; uniform vec3 vigTint; uniform float aberr;
 uniform vec2 aspect; varying vec2 vUv;
 vec3 shoulder(vec3 x){
   float t = 0.72;
   vec3 over = t + (1.0 - t) * (1.0 - exp(-(x - t) / (1.0 - t)));
   return mix(x, over, step(vec3(t), x));
 }
+// Fitted ACES filmic curve (Narkowicz), scaled so mid-grey stays where the pastel palette expects it.
+vec3 aces(vec3 x){
+  x *= 0.84;
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+vec3 tonemap(vec3 x){ return mix(shoulder(x), aces(x * 1.32), filmic); }
 vec3 toSRGB(vec3 c){ return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c)); }
 float hash(float n){ return fract(sin(n) * 43758.5453); }
 void main(){
   vec2 uv = vUv;
   vec2 d = (uv - 0.5);
   vec3 c = texture2D(tScene, uv).rgb;
+  if (aberr > 0.0005) {
+    // Lens fringing that grows towards the frame edge (stronger at speed and when hurt).
+    vec2 o = d * aberr * dot(d, d) * 4.0;
+    c.r = texture2D(tScene, uv - o).r;
+    c.b = texture2D(tScene, uv + o).b;
+  }
   if (speed > 0.001) {
     // Radial motion blur towards the edges plus thin bright streaks rushing outwards.
     float e = smoothstep(0.3, 0.8, length(d * aspect));
@@ -65,12 +84,19 @@ void main(){
   }
   vec3 b = texture2D(tBloomA, uv).rgb * 0.75 + texture2D(tBloomB, uv).rgb;
   c = c * exposure + b * bloom;
-  c = shoulder(c);
+  c = tonemap(c);
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = max(mix(vec3(l), c, sat), 0.0);
   c *= mix(vec3(1.0), vec3(1.08, 0.98, 0.9), warm);
-  float v = smoothstep(0.9, 0.3, length(d * vec2(1.0, 0.85)));
-  c *= mix(1.0 - vignette, 1.0, v);
+  // Colour grade: contrast around mid-grey (in a gamma-ish space), tinted shadows (lift) and highlights (gain).
+  vec3 g = pow(max(c, 0.0), vec3(1.0 / 2.2));
+  g = (g - 0.5) * contrast + 0.5;
+  float lg = dot(g, vec3(0.2126, 0.7152, 0.0722));
+  g += lift * (1.0 - smoothstep(0.0, 0.55, lg));
+  g *= mix(vec3(1.0), gain, smoothstep(0.35, 1.0, lg));
+  c = pow(max(g, 0.0), vec3(2.2));
+  float v = smoothstep(0.92, 0.28, length(d * vec2(1.0, 0.85)));
+  c *= mix(vigTint * (1.0 - vignette), vec3(1.0), v);
   gl_FragColor = vec4(toSRGB(clamp(c, 0.0, 1.0)), 1.0);
 }`;
 
@@ -93,6 +119,8 @@ export function setupPost(r) {
   mComp = shader(COMPOSITE, {
     tScene: { value: null }, tBloomA: { value: null }, tBloomB: { value: null },
     bloom: { value: 1 }, exposure: { value: 1 }, sat: { value: 1 }, vignette: { value: 0 }, speed: { value: 0 }, warm: { value: 0 }, time: { value: 0 },
+    filmic: { value: 0.5 }, contrast: { value: 1 }, lift: { value: new THREE.Vector3() }, gain: { value: new THREE.Vector3(1, 1, 1) },
+    vigTint: { value: new THREE.Vector3(1, 1, 1) }, aberr: { value: 0 },
     aspect: { value: new THREE.Vector2(1, 1) },
   });
   quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mComp);
@@ -154,6 +182,10 @@ export function renderFrame(scene, camera, time = 0) {
   u.tBloomB.value = quarterA.texture;
   u.bloom.value = post.bloom; u.exposure.value = post.exposure; u.sat.value = post.sat;
   u.vignette.value = post.vignette; u.speed.value = post.speed; u.warm.value = post.warm; u.time.value = time;
+  u.filmic.value = post.filmic; u.contrast.value = post.contrast; u.aberr.value = post.aberr + post.speed * 0.006;
+  u.lift.value.set(post.lift[0], post.lift[1], post.lift[2]);
+  u.gain.value.set(post.gain[0], post.gain[1], post.gain[2]);
+  u.vigTint.value.set(post.vigTint[0], post.vigTint[1], post.vigTint[2]);
   u.aspect.value.set(size.x / size.y, 1);
   pass(mComp, null);
 }

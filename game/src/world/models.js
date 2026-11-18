@@ -193,7 +193,20 @@ export function makeMarker(color = '#ffd23f') {
   const chev = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.2, 4), new THREE.MeshBasicMaterial({ color }));
   chev.rotation.x = Math.PI;
   chev.position.y = 7.2;
-  g.add(col, ring, chev);
+  // Tall light beam visible across the city: open cylinder, vertex alpha fading upwards (additive).
+  const bg = new THREE.CylinderGeometry(0.9, 1.25, 90, 10, 6, true);
+  bg.translate(0, 45, 0);
+  const bp = bg.attributes.position, bcol = [];
+  const c3 = new THREE.Color(color);
+  for (let i = 0; i < bp.count; i++) { const k = Math.pow(1 - bp.getY(i) / 90, 1.6); bcol.push(c3.r * k, c3.g * k, c3.b * k); }
+  bg.setAttribute('color', new THREE.Float32BufferAttribute(bcol, 3));
+  const beam = new THREE.Mesh(bg, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: glowTexture(color), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 }));
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.y = 0.1;
+  g.add(col, ring, chev, beam, pool);
   g.userData.chev = chev;
+  g.userData.beam = beam;
+  g.userData.pool = pool;
   return g;
 }

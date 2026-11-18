@@ -4,6 +4,7 @@ import { nodePos, nodeNeighbors, nearestNode } from './city.js';
 import { Vehicle, vehicles } from '../gameplay/vehicles.js';
 import { rand, pick, irange } from '../core/rng.js';
 import { emit } from '../core/state.js';
+import { signalAt } from './furniture.js';
 
 const LANE = 3;
 const TARGET_COUNT = 24;
@@ -75,6 +76,12 @@ export function driveTraffic(v, dt, actors) {
   c.steer = Math.max(-1, Math.min(1, -diff * 2.2));
   c.handbrake = false;
   let limit = ai.cruise * (Math.abs(diff) > 0.4 ? 0.55 : 1);
+  // Traffic signals: stop at the line on red (and on amber if there is room to stop).
+  const toNode = segLen - along;
+  if (toNode > 7.5 && toNode < 26) {
+    const st = signalAt(ai.to.i, ai.to.j, dx ? 'x' : 'z');
+    if (st === 'red' || (st === 'amber' && toNode > 13)) limit = Math.min(limit, Math.max(0, (toNode - 9) * 1.3));
+  }
   // Obstacles straight ahead: other cars, the player, pedestrians in the road
   const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
   let blockedBy = null;

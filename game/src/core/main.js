@@ -26,6 +26,12 @@ import { setupProgression } from '../gameplay/progression.js';
 import { setupPost, resizePost, renderFrame, post } from '../fx/post.js';
 import { loadSettings, applySettings, saveSettings } from './settings.js';
 import { applyGrade } from '../fx/grade.js';
+import { mats as cityMats } from '../world/city.js';
+import { buildLandmarks, updateLandmarks } from '../world/landmarks.js';
+import { buildStorefronts } from '../world/storefronts.js';
+import { buildFurniture, updateFurniture } from '../world/furniture.js';
+import { buildClouds, updateClouds } from '../world/clouds.js';
+import { setupCarLights, updateCarLights } from '../fx/carlights.js';
 
 const THREE = window.THREE;
 const params = new URLSearchParams(location.search);
@@ -48,7 +54,12 @@ const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 26
 setupPost(renderer);
 loadSettings(renderer, !!SHOT);
 buildCity(scene);
+buildLandmarks(city.group, cityMats.wood);
+buildStorefronts(city.group);
+buildFurniture(city.group);
 setupSky(scene);
+buildClouds(scene);
+setupCarLights(scene);
 setupEffects(scene);
 setupVehicles(scene);
 setupPlayer(scene);
@@ -265,9 +276,15 @@ function step(dt) {
   if (game.mode === 'play') cuffT = Math.max(0, cuffT - dt * 0.5);
 }
 
+let hurt = 0, lastHealth = 100;
 function render(dt, now) {
   const night = updateSky(game.mode === 'pause' ? 0 : dt, player, scene);
-  updateCity(t, night);
+  const wdt = game.mode === 'pause' ? 0 : dt;
+  updateCity(t, night, player);
+  updateLandmarks(t, wdt, night);
+  updateFurniture(wdt);
+  updateClouds(wdt, player);
+  updateCarLights(player, night, t, player.vehicle);
   if (game.mode === 'title' && !SHOT) {
     const a = now * 0.05;
     setCameraPose(SHOWCASE.x - 9 + Math.sin(a) * 2, 2.6, SHOWCASE.z + 7 + Math.cos(a) * 1.5, SHOWCASE.x - 1.5, 1.6, SHOWCASE.z - 1);
@@ -279,7 +296,11 @@ function render(dt, now) {
   updateAudio(pv ? pv.speed : null, pv ? pv.spec.top : 1, sirenD, pv ? pv.skid || 0 : 0);
   updateHeliGlare(camera, night);
   if (game.mode !== 'play' && !SHOT) post.speed = 0;
-  applyGrade(night, sky.hour);
+  // A hit flashes the vignette red for a moment.
+  if (game.health < lastHealth && game.mode === 'play') hurt = Math.min(1, hurt + (lastHealth - game.health) / 25);
+  lastHealth = game.health ?? 100;
+  hurt = Math.max(0, hurt - dt * 1.6);
+  applyGrade(night, sky.hour, SHOT ? 0 : hurt);
   renderFrame(scene, camera, now);
 }
 
