@@ -28,6 +28,7 @@ export const city = {
 };
 
 export const districtAt = (x, z) => {
+  if (x > OCEAN_X - 8 && Math.abs(z - PIER_Z) < 7) return DISTRICTS.find((d) => d.id === 'pier');
   if (x > CITY_SIZE + HALF_ROAD) return { id: 'beach', name: BEACH_NAME, color: '#ffe2a8' };
   const bx = Math.max(0, Math.min(GRID_N - 1, Math.floor(x / CELL)));
   const bz = Math.max(0, Math.min(GRID_N - 1, Math.floor(z / CELL)));
@@ -67,7 +68,8 @@ export function snapToRoad(x, z) {
 
 // ---- Colliders ---------------------------------------------------------------------------
 const HC = 16;
-function addCollider(minX, maxX, minZ, maxZ, h, low = false) {
+// Registers a solid box for movement, sight and bullets (also used by world/cover.js for crates).
+export function addCollider(minX, maxX, minZ, maxZ, h, low = false) {
   const c = { minX, maxX, minZ, maxZ, h, low };
   const id = city.colliders.push(c) - 1;
   for (let gx = Math.floor(minX / HC); gx <= Math.floor(maxX / HC); gx++) {

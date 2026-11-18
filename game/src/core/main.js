@@ -13,6 +13,10 @@ import { setupPedestrians, populatePeds, updatePeds, peds } from '../world/pedes
 import { toggleVehicle, exitVehicle } from '../gameplay/carjack.js';
 import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from '../gameplay/police.js';
 import { setupCombat, updateCombat, shooters, clearShooters } from '../gameplay/combat.js';
+import { setupWeapons, updateWeapons } from '../gameplay/weapons.js';
+import { updateEnemies } from '../gameplay/enemies.js';
+import { setupPickups, updatePickups } from '../gameplay/pickups.js';
+import { buildCover } from '../world/cover.js';
 import { setupMissions, updateMissions, failMission, ms } from '../gameplay/missions.js';
 import { setupDialogue, updateDialogue, say, clearDialogue } from '../ui/dialogue.js';
 import { setupHud, updateHud, showHud, showDown } from '../ui/hud.js';
@@ -62,6 +66,7 @@ buildCity(scene);
 buildLandmarks(city.group, cityMats.wood);
 buildStorefronts(city.group);
 buildFurniture(city.group);
+buildCover(city.group);
 setupSky(scene);
 buildClouds(scene);
 setupCarLights(scene);
@@ -71,7 +76,9 @@ setupPlayer(scene);
 setupCamera(camera);
 setupPedestrians(scene);
 setupPolice(scene);
-setupCombat(scene, camera);
+setupCombat(scene);
+setupWeapons(camera);
+setupPickups(scene);
 setupMissions(scene);
 setupActivities(scene);
 setupDialogue();
@@ -128,8 +135,8 @@ export function enterTitle() {
 
 function resetRun() {
   Object.assign(game, {
-    cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false },
-    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], missionBest: {}, tipsSeen: [], activeMission: null, side: defaultSide(), sideBusy: false,
+    cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false, lance: false },
+    ammo: { pistol: 60, smg: 0, pump: 0, lance: 0 }, clip: { pistol: 12, smg: 0, pump: 0, lance: 0 }, weapon: 0, rep: 0, missionsDone: [], missionBest: {}, tipsSeen: [], activeMission: null, side: defaultSide(), sideBusy: false,
     stats: freshStats(),
     skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   });
@@ -266,7 +273,10 @@ function step(dt) {
   // Side activities first: an open shop menu swallows the number keys before combat sees them.
   updateActivities(dt, t, camera);
   if (game.mode === 'play') {
-    updateCombat(dt, t);
+    updateWeapons(dt);
+    updateEnemies(dt);
+    updateCombat(dt);
+    updatePickups(dt, t);
     if (player.vehicle) player.vehicle.controls.handbrake ||= false;
   }
   if (game.mode === 'down') { downT -= dt; if (downT <= 0) respawn(); }

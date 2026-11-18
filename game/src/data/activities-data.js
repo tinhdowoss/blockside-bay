@@ -39,6 +39,7 @@ export const SHOP = [
   { key: 2, id: 'smg', label: 'SMG', sub: '+120 rounds', price: 300, unlock: 2000, rep: 3, give: { ammo: 'smg', n: 120 } },
   { key: 3, id: 'pump', label: 'SCATTER GUN', sub: '+24 shells', price: 350, unlock: 3500, rep: 5, give: { ammo: 'pump', n: 24 } },
   { key: 4, id: 'armor', label: 'BODY ARMOR', sub: 'Full plate', price: 400 },
+  { key: 5, id: 'lance', label: 'SEA LANCE', sub: '+9 harpoon bolts', price: 450, unlock: 6000, rep: 7, give: { ammo: 'lance', n: 9 } },
 ];
 
 export const TUNE = [

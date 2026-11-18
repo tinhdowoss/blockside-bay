@@ -143,7 +143,7 @@ for (let n = 0; n < 9; n++) {
 
 const end = await run(`return { done: game.missionsDone.length, weapons: Object.keys(game.weapons).filter((k) => game.weapons[k]), best: Object.keys(game.missionBest || {}).length, info: M.mis.objectiveInfo().title };`);
 ok('all 9 missions done', end.done === 9, JSON.stringify(end));
-ok('weapon unlocks granted (smg, pump)', end.weapons.includes('smg') && end.weapons.includes('pump'));
+ok('weapon unlocks granted (smg, lance, pump)', ['smg', 'lance', 'pump'].every((w) => end.weapons.includes(w)), end.weapons.join(','));
 ok('best times recorded for every mission', end.best === 9);
 ok('HUD free-roam after the story', end.info === 'THE BAY IS YOURS');
 const saved = await run(`M.save.saveGame(1); const d = M.save.readSlot(1); return Object.keys(d.missionBest || {}).length;`);

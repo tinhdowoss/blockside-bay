@@ -1,19 +1,20 @@
-// The player on foot (walk, sprint, collide, face the aim) and the hand-off of controls to a car.
+// The player on foot (walk, sprint, crouch, dodge roll, collide, face the aim) and the hand-off of
+// controls to a car.
 // The camera lives in camera.js.
 import { PLAYER } from '../core/config.js';
 import { makeCharacter, animateCharacter } from '../world/models.js';
 import { collideCircle } from '../world/city.js';
 import { vehicles } from './vehicles.js';
-import { input, key } from '../core/input.js';
+import { input, key, tapped } from '../core/input.js';
 import { snapCamera } from './camera.js';
-import { game, bumpSkill } from '../core/state.js';
+import { game, bumpSkill, emit } from '../core/state.js';
 import { CAST } from '../data/cast.js';
 
 
 export const player = {
   x: 60, z: 100, yaw: 0, vehicle: null, model: null,
   phase: 0, speed: 0, camYaw: 0, camPitch: 0.18, aiming: false, punch: 0,
-  stamina: 1, hurt: 0, alive: true,
+  stamina: 1, hurt: 0, alive: true, crouch: false, rolling: 0, rollCD: 0, rollDir: null,
 };
 
 export function setupPlayer(scene) {
@@ -24,6 +25,7 @@ export function setupPlayer(scene) {
 
 export function placePlayer(x, z, yaw = 0) {
   player.x = x; player.z = z; player.yaw = yaw; player.camYaw = yaw;
+  player.crouch = false; player.rolling = 0;
   snapCamera();
 }
 
@@ -49,11 +51,28 @@ export function updatePlayer(dt) {
     mz = c * fwd + s * side;
     const l = Math.hypot(mx, mz); mx /= l; mz /= l;
   }
+  // C toggles a crouch (slower, steadier aim, hides behind crates); sprinting stands up.
+  if (tapped('KeyC')) { player.crouch = !player.crouch; emit('crouch', player.crouch); }
+  if (sprint && (fwd || side)) player.crouch = false;
+  // SPACE: a quick dodge roll in the move direction (backwards when standing still). Bullets miss
+  // during the roll; it costs stamina and has a short cooldown.
+  player.rollCD = Math.max(0, (player.rollCD || 0) - dt);
+  if (tapped('Space') && !player.rolling && player.rollCD <= 0 && player.stamina > 0.2) {
+    const s = Math.sin(player.camYaw), c = Math.cos(player.camYaw);
+    player.rollDir = (fwd || side) ? { x: mx, z: mz } : { x: -s, z: -c };
+    player.rolling = 0.42; player.rollCD = 0.9; player.stamina -= 0.2; player.crouch = false;
+    emit('roll');
+  }
   const canSprint = sprint && player.stamina > 0.05;
-  const spd = (fwd || side) ? (canSprint ? PLAYER.sprint : PLAYER.walk) : 0;
+  const spd = (fwd || side) ? (canSprint ? PLAYER.sprint : player.crouch ? PLAYER.walk * 0.5 : PLAYER.walk) : 0;
   player.stamina = Math.max(0, Math.min(1, player.stamina + (canSprint && spd ? -0.18 : 0.25) * dt));
   if (canSprint && spd) bumpSkill('stamina', dt * 0.0015);
   player.speed += (spd - player.speed) * Math.min(1, dt * 10);
+  if (player.rolling > 0) {
+    player.rolling = Math.max(0, player.rolling - dt);
+    mx = player.rollDir.x; mz = player.rollDir.z;
+    player.speed = 11;
+  }
   player.x += mx * player.speed * dt;
   player.z += mz * player.speed * dt;
   const r = collideCircle(player.x, player.z, PLAYER.radius);
@@ -65,7 +84,7 @@ export function updatePlayer(dt) {
   game.stats.walked = (game.stats.walked || 0) + player.speed * dt;
   // Facing: aim direction while armed or shooting, else movement direction.
   player.aiming = game.weapon > 0 || input.fire;
-  const targetYaw = player.aiming ? player.camYaw : (spd ? Math.atan2(mx, mz) : player.yaw);
+  const targetYaw = player.rolling > 0 ? Math.atan2(mx, mz) : player.aiming ? player.camYaw : (spd ? Math.atan2(mx, mz) : player.yaw);
   let dy = targetYaw - player.yaw;
   dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   player.yaw += dy * Math.min(1, dt * 14);
@@ -75,10 +94,19 @@ export function updatePlayer(dt) {
 }
 
 export function syncModel() {
-  player.model.position.set(player.x, 0, player.z);
-  player.model.rotation.y = player.yaw;
-  animateCharacter(player.model, player.phase, Math.min(1, player.speed / 5), player.aiming && game.weapon > 0, player.punch);
-  player.model.userData.parts.gun.visible = game.weapon > 0;
+  const m = player.model;
+  m.position.set(player.x, 0, player.z);
+  m.rotation.set(0, player.yaw, 0);
+  m.scale.set(1, player.crouch ? 0.7 : 1, 1);
+  animateCharacter(m, player.phase, Math.min(1, player.speed / 5), player.aiming && game.weapon > 0, player.punch);
+  if (player.rolling > 0) {
+    // Tuck and tumble forward once over the roll.
+    const k = 1 - player.rolling / 0.42;
+    m.position.y = 0.55 - Math.abs(Math.cos(k * Math.PI)) * 0.25;
+    m.rotateX(k * Math.PI * 2);
+    m.scale.set(1, 0.72, 1);
+  }
+  m.userData.parts.gun.visible = game.weapon > 0 && !(player.rolling > 0);
 }
 
 function driveControls(v) {

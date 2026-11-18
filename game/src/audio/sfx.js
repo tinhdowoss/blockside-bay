@@ -35,6 +35,7 @@ const WPN = {
   smg: { crack: 0.4, body: 0.45, bodyF: 1300, bodyT: 0.09, thump: 150, len: 0.3 },
   pump: { crack: 0.6, body: 0.9, bodyF: 600, bodyT: 0.3, thump: 80, len: 0.9 },
   npc: { crack: 0.45, body: 0.5, bodyF: 1000, bodyT: 0.14, thump: 130, len: 0.45 },
+  lance: { crack: 0.15, body: 0.75, bodyF: 420, bodyT: 0.22, thump: 60, len: 0.6 },
 };
 export function gunshot(kind = 'pistol', x, z, mine = true) {
   if (!mix.ac) return;
@@ -48,6 +49,15 @@ export function gunshot(kind = 'pistol', x, z, mine = true) {
   noise(t, w.bodyT, w.body * v, Math.min(p.lp, w.bodyF), { ftype: 'lowpass', pan: p.pan, rev, dly: mine ? 0.18 : 0.08 });
   tone('sine', w.thump, t, 0.14, 0.45 * v, { glide: 45, pan: p.pan });
   if (kind === 'pump') noise(t + 0.32, 0.05, 0.25 * v, 1500, { ftype: 'bandpass', q: 2, pan: p.pan }); // rack
+  if (kind === 'lance') tone('sawtooth', 900, t, 0.25, 0.08 * v, { glide: 180, filter: 2400, pan: p.pan, rev: 0.3 }); // cable whine
+}
+
+// Crosshair hit tick: higher and brighter for headshots, a double tick for a takedown.
+export function hitTick(head = false, kill = false) {
+  if (!mix.ac) return;
+  const t = mix.ac.currentTime, f = head ? 2400 : 1700;
+  tone('square', f, t, 0.04, 0.05, { bus: mix.ui, filter: 5000 });
+  if (kill) tone('square', f * 1.5, t + 0.05, 0.05, 0.05, { bus: mix.ui, filter: 5000 });
 }
 export function punch() { if (mix.ac) { const t = mix.ac.currentTime; noise(t, 0.09, 0.55, 500, { ftype: 'lowpass' }); tone('sine', 90, t, 0.1, 0.4, { glide: 50 }); } }
 export function crash(impact, x, z) {

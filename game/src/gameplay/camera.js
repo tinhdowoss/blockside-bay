@@ -36,7 +36,7 @@ export function updateCamera(dt, now) {
     dist = 9 + v.speed * 0.07 - rush * 1.2; height = 2.4 - rush * 0.5; side = 0; lookAhead = 4 + rush * 4;
     camera.fov += (((game.fov ?? 62) + Math.min(16, v.speed * 0.32) + rush * 6) - camera.fov) * Math.min(1, dt * 3);
   } else {
-    target.set(player.x, 1.75, player.z);
+    target.set(player.x, player.crouch ? 1.3 : 1.75, player.z);
     dist = player.aiming ? 3.6 : 4.8; height = 0.55; side = player.aiming ? 1.05 : 0.75; lookAhead = 8;
     camera.fov += (((game.fov ?? 62) - 2) - camera.fov) * Math.min(1, dt * 4);
   }

@@ -6,9 +6,9 @@ export const game = {
   cash: 2500,
   health: 100,
   armor: 50,
-  weapons: { fists: true, pistol: true, smg: false, pump: false },
-  ammo: { pistol: 60, smg: 0, pump: 0 },
-  clip: { pistol: 12, smg: 0, pump: 0 },
+  weapons: { fists: true, pistol: true, smg: false, pump: false, lance: false },
+  ammo: { pistol: 60, smg: 0, pump: 0, lance: 0 },
+  clip: { pistol: 12, smg: 0, pump: 0, lance: 0 },
   rep: 0,                // street reputation XP (gameplay/progression.js)
   weapon: 1,             // index into WEAPONS
   missionsDone: [],

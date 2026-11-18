@@ -97,7 +97,7 @@ export function updateActivities(dt, t, camera) {
   if (!playing) return;
   // Menus: number keys buy, walking/driving away closes.
   if (shop.open) {
-    for (let n = 1; n <= 4; n++) if (tapped(`Digit${n}`) && shopKey(n)) input.pressed.delete(`Digit${n}`);
+    for (let n = 1; n <= 5; n++) if (tapped(`Digit${n}`) && shopKey(n)) input.pressed.delete(`Digit${n}`);
     if (shop.flash) shop.flash.t -= dt;
     const far = dist(shop.site) > (shop.open === 'garage' ? 8 : 5);
     if (far || (shop.open === 'garage' && !player.vehicle) || tapped('KeyG')) { closeShop(); input.pressed.delete('KeyG'); }
@@ -158,7 +158,7 @@ export function updateActivityHud() {
     const flash = sp.flash && sp.flash.t > 0 ? `<div class="s-flash" style="color:${sp.flash.ok ? '#5dff6a' : '#ff5f5f'}">${sp.flash.text}</div>` : '';
     set(els.menu, 'm', `<div class="s-head" style="color:${sp.color}">${sp.title}</div><div class="s-tag">${sp.tag}</div>
       ${sp.opts.map((o) => `<div class="s-opt ${o.off ? 'off' : ''}"><span class="k">${o.key}</span><span class="l">${o.label}<small>${o.note}</small></span><b>${o.off ? '' : '$' + o.price.toLocaleString('en-US')}</b></div>`).join('')}
-      ${flash}<div class="s-foot">1-4 BUY  ·  G CLOSE  ·  CASH $${game.cash.toLocaleString('en-US')}</div>`);
+      ${flash}<div class="s-foot">1-${sp.opts.length} BUY  ·  G CLOSE  ·  CASH $${game.cash.toLocaleString('en-US')}</div>`);
   } else els.menu.style.display = 'none';
   els.count.style.display = countT > 0 ? 'block' : 'none';
   if (countT > 0) { set(els.count, 'c', countN > 0 ? String(countN) : 'GO!'); els.count.style.opacity = Math.min(1, countT * 2); els.count.style.color = countN > 0 ? '#ffd23f' : '#5dff6a'; }

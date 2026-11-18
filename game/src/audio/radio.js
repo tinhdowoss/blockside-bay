@@ -64,6 +64,9 @@ export function setupAudioEvents() {
   on('honk', S.horn);
   on('reload', S.reloadSfx);
   on('dryfire', S.dryFire);
+  on('hitMarker', (h) => S.hitTick(h.head, h.kill));
+  on('roll', () => S.punch());
+  on('pickup', () => S.coin());
   on('hurt', S.hurtSfx);
   // The car radio plays while you are in a vehicle (the title screen turns it on by itself).
   on('enterVehicle', () => { S.door(true); radio.on = true; });

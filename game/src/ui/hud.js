@@ -13,20 +13,21 @@ import { setupLocation, updateLocation } from './location.js';
 import { setupTips, updateTips } from './tips.js';
 import { gpsTarget } from './minimap.js';
 import { gpsRoute, routeLength } from './gps.js';
-import { isReloading } from '../gameplay/combat.js';
+import { isReloading, aimBloom } from '../gameplay/weapons.js';
 import { radioInfo } from '../audio/radio.js';
 import { resultsOpen } from './results.js';
 
 const THREE = window.THREE;
 let root, camera, els = {};
 const popups = [];
-let banner = null, toast = null, shownCash = 0, lastHTML = {};
+let banner = null, toast = null, shownCash = 0, lastHTML = {}, hitT = 0;
 
 const ICONS = {
   fists: ['................', '.....XXXXXX.....', '....XXXXXXXX....', '....XX.XX.XX....', '....XXXXXXXX....', '.....XXXXXXX....', '......XXXXX.....', '......XXXXX.....'],
   pistol: ['................', '..XXXXXXXXXXXX..', '..XXXXXXXXXXXX..', '..XXXXXXX.......', '..XXXX.X........', '..XXXX..........', '..XXXX..........', '................'],
   smg: ['................', 'XXXXXXXXXXXXXXX.', 'XXXXXXXXXXXXXXX.', '...XXXXX.X......', '...XXX.XXX......', '...XXX..XX......', '...XXX..XX......', '........XX......'],
   pump: ['................', 'XXXXXXXXXXXXXXXX', 'XXXXXXXXXXXXXXXX', '.XXXX..XXXX.....', 'XXXX............', 'XXX.............', 'XX..............', '................'],
+  lance: ['................', 'X..............X', 'XXXXXXXXXXXXXXXX', '.XXXXXXXXX..X..X', '.XXX.X..........', '.XXX............', '..XX............', '................'],
   lock: ['......XXXX......', '.....X....X.....', '.....X....X.....', '....XXXXXXXX....', '....XXX..XXX....', '....XXX..XXX....', '....XXXXXXXX....', '................'],
 };
 
@@ -83,10 +84,11 @@ export function setupHud(cam) {
       <div class="car"></div>
     </div>
     <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+    <div id="hitmark"><i></i><i></i><i></i><i></i></div>
     <div id="banner" class="outl"></div>
     <div id="toastline" class="outl"></div>
     <div id="downscreen" class="outl"><div class="t"></div><div class="s"></div></div>`;
-  for (const id of ['mission', 'rep', 'response', 'clock', 'cash', 'stars', 'weapons', 'ammo', 'district', 'hp', 'ar', 'radio', 'speedo', 'crosshair', 'banner', 'toastline', 'hurt', 'downscreen', 'mapwrap', 'topright']) els[id] = document.getElementById(id);
+  for (const id of ['mission', 'rep', 'response', 'clock', 'cash', 'stars', 'weapons', 'ammo', 'district', 'hp', 'ar', 'radio', 'speedo', 'crosshair', 'hitmark', 'banner', 'toastline', 'hurt', 'downscreen', 'mapwrap', 'topright']) els[id] = document.getElementById(id);
   els.weapons.innerHTML = WEAPONS.map((w, i) => `<div class="slot panel" data-id="${w.id}"><span class="key">${i + 1}</span><b></b><small></small></div>`).join('');
   els.weapons.querySelectorAll('.slot').forEach((s, i) => s.insertBefore(icon(WEAPONS[i].id), s.querySelector('b')));
   els.radio.querySelector('.eq').innerHTML = '<i></i>'.repeat(7);
@@ -96,6 +98,7 @@ export function setupHud(cam) {
   on('banner', (b) => { banner = { ...b, t: 4 }; });
   on('toast', (t) => { toast = { ...t, t: 2.6 }; });
   on('hurt', () => { els.hurt.style.opacity = 1; });
+  on('hitMarker', (h) => { hitT = h.kill ? 0.35 : 0.18; els.hitmark.className = h.head ? 'head' : h.kill ? 'kill' : 'hit'; });
   on('stageClear', ({ def, stage }) => { toast = { text: `✓ STAGE ${stage + 1}/${def.stages.length} CLEAR`, color: '#7cff6b', t: 2.2 }; });
   setupLocation(root);
   setupTips(root);
@@ -180,11 +183,12 @@ function updateWeapons() {
     const id = WEAPONS[i].id, owned = !!game.weapons[id];
     s.classList.toggle('on', i === game.weapon);
     s.classList.toggle('locked', !owned);
-    s.querySelector('b').textContent = WEAPONS[i].name;
+    s.querySelector('b').textContent = WEAPONS[i].short || WEAPONS[i].name;
     const m = MISSIONS.find((d) => d.unlock === id);
     s.querySelector('small').textContent = !owned ? `LOCKED CH${m ? m.chapter : '?'}` : WEAPONS[i].clip ? `${game.clip[id] + game.ammo[id]}` : '∞';
   });
-  setHTML(els.ammo, 'ammo', w.clip ? (isReloading() ? 'RELOADING' : `${game.clip[w.id]} <small>/ ${game.ammo[w.id]}</small>`) : '<small>MELEE</small>');
+  const stance = player.crouch ? ' <em>CROUCHED</em>' : '';
+  setHTML(els.ammo, 'ammo', (w.clip ? (isReloading() ? 'RELOADING' : `${game.clip[w.id]} <small>/ ${game.ammo[w.id] || 0}</small>`) : '<small>MELEE</small>') + stance);
 }
 
 function updateSpeedo(v, now) {
@@ -241,6 +245,12 @@ export function updateHud(dt, now = performance.now() / 1000) {
 
   // Crosshair on foot with a gun
   els.crosshair.style.display = !v && game.mode === 'play' && (game.weapon > 0 || player.aiming) ? 'block' : 'none';
+  // The crosshair opens with recoil bloom; the X hit marker flashes on a hit.
+  const gap = Math.round(30 + aimBloom() * 700 + (player.speed > 1 ? 8 : 0) - (player.crouch ? 4 : 0));
+  els.crosshair.style.width = els.crosshair.style.height = `${gap}px`;
+  els.crosshair.style.margin = `${-gap / 2}px 0 0 ${-gap / 2}px`;
+  hitT = Math.max(0, hitT - dt);
+  els.hitmark.style.opacity = hitT > 0 ? Math.min(1, hitT * 8) : 0;
 
   // Popups float up
   for (let i = popups.length - 1; i >= 0; i--) {
@@ -275,10 +285,6 @@ export function showDown(title, sub) {
   if (title) { els.downscreen.querySelector('.t').textContent = title; els.downscreen.querySelector('.s').textContent = sub; }
 }
 
-export function hitMarker() {
-  els.crosshair.classList.add('hit');
-  setTimeout(() => els.crosshair.classList.remove('hit'), 120);
-}
 
 export function clearCenterText() {
   banner = null; toast = null;

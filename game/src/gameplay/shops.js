@@ -111,7 +111,7 @@ export function shopKey(n) {
     return true;
   }
   game.ammo[o.give.ammo] = (game.ammo[o.give.ammo] || 0) + o.give.n;
-  say(`+${o.give.n} ${o.id === 'pump' ? 'SHELLS' : 'ROUNDS'}`);
+  say(`+${o.give.n} ${{ pump: 'SHELLS', lance: 'BOLTS' }[o.id] || 'ROUNDS'}`);
   return true;
 }
 

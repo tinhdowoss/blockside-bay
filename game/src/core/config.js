@@ -46,11 +46,15 @@ export const CAR_MODELS = {
 };
 export const TRAFFIC_MODELS = ['cruza', 'cruza', 'palomar', 'bayrunner', 'vista', 'cruza', 'vista'];
 
+// Player weapons, one per number key. kick = camera recoil (radians), bloom = spread added per shot
+// (decays back), reloadT = reload seconds, pierce = how many bodies one shot passes through.
 export const WEAPONS = [
   { id: 'fists', name: 'FISTS', icon: 'FIST', damage: 18, range: 2.4, rate: 0.38, auto: false, clip: 0, spread: 0 },
-  { id: 'pistol', name: 'PISTOL', icon: 'PSTL', damage: 34, range: 90, rate: 0.26, auto: false, clip: 12, spread: 0.012 },
-  { id: 'smg', name: 'SMG', icon: 'SMG', damage: 20, range: 70, rate: 0.085, auto: true, clip: 30, spread: 0.035 },
-  { id: 'pump', name: 'SCATTER', icon: 'PUMP', damage: 16, range: 34, rate: 0.75, auto: false, clip: 6, spread: 0.07, pellets: 7 },
+  { id: 'pistol', name: 'PISTOL', icon: 'PSTL', damage: 34, range: 90, rate: 0.26, auto: false, clip: 12, spread: 0.012, kick: 0.03, bloom: 0.014, reloadT: 1.1 },
+  { id: 'smg', name: 'SMG', icon: 'SMG', damage: 20, range: 70, rate: 0.085, auto: true, clip: 30, spread: 0.03, kick: 0.012, bloom: 0.007, reloadT: 1.4 },
+  { id: 'pump', name: 'SCATTER', icon: 'PUMP', damage: 16, range: 34, rate: 0.75, auto: false, clip: 6, spread: 0.07, pellets: 7, kick: 0.09, bloom: 0.02, reloadT: 1.8 },
+  // SEA LANCE: a pneumatic harpoon gun from Salt's yacht. Slow, silent-ish, pins through a whole line.
+  { id: 'lance', name: 'SEA LANCE', short: 'LANCE', icon: 'LNCE', damage: 120, range: 130, rate: 0.95, auto: false, clip: 3, spread: 0.002, pierce: 3, kick: 0.07, bloom: 0.004, reloadT: 2.0 },
 ];
 
 // Street reputation: XP needed for each level and the title it earns.

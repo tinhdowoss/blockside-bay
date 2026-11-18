@@ -9,6 +9,7 @@ import { missionGoal, ms, nextMission } from '../gameplay/missions.js';
 import { vehicles } from '../gameplay/vehicles.js';
 import { activityPins, activityTarget, nearShells } from '../gameplay/activities.js';
 import { gpsRoute } from './gps.js';
+import { nearPickups } from '../gameplay/pickups.js';
 import { game } from '../core/state.js';
 
 const PX = 2;                 // map pixels per world unit
@@ -151,6 +152,14 @@ export function drawMinimap(t) {
     g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 6);
     g.fillStyle = '#5ffff0'; g.fillRect(p.x - 1.5, p.y - 5, 3, 10); g.fillRect(p.x - 5, p.y - 1.5, 10, 3);
     g.globalAlpha = 1;
+  }
+  for (const a of nearPickups()) {
+    const p = proj(a.x, a.z);
+    if (p.edge) continue;
+    g.save(); g.translate(p.x, p.y); g.rotate(Math.PI / 4);
+    g.fillStyle = '#12061c'; g.fillRect(-6, -6, 12, 12);
+    g.fillStyle = '#2f8dff'; g.fillRect(-4, -4, 8, 8);
+    g.restore();
   }
   const at = activityTarget();
   if (at) {
