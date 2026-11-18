@@ -1,0 +1,4 @@
+/* BLOCKSIDE BAY — page layout; HUD and menu styles live in hud.css. */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+#game-root { position: fixed; inset: 0; }
+#view { display: block; width: 100%; height: 100%; }
