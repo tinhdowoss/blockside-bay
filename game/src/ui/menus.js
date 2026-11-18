@@ -1,18 +1,18 @@
 // Title screen (blocky logo, Continue/New/Load/Controls/Settings, key list, crew portraits) and the
 // pause menu (MAP with district labels and pins, MISSIONS, STATS, SAVE, SETTINGS).
-import { GAME_TITLE, DISTRICTS, CELL, GRID_N, OCEAN_X, CITY_SIZE, SAVE_SLOTS, BEACH_NAME } from './config.js';
+import { GAME_TITLE, DISTRICTS, CELL, GRID_N, OCEAN_X, CITY_SIZE, SAVE_SLOTS, BEACH_NAME } from '../core/config.js';
 import { drawBlockyTitle, drawPixelText, textWidth } from './pixelfont.js';
-import { CAST, CREW, portraitURL } from './cast.js';
-import { MISSIONS, CHAPTER_NAMES } from './missions-data.js';
+import { CAST, CREW, portraitURL } from '../data/cast.js';
+import { MISSIONS, CHAPTER_NAMES } from '../data/missions-data.js';
 import { cityMapImage, toMap } from './minimap.js';
-import { city } from './city.js';
-import { player } from './player.js';
-import { police } from './police.js';
-import { ms, nextMission } from './missions.js';
-import { listSlots, latestSlot } from './save.js';
-import { game, completion } from './state.js';
-import { sky } from './daylight.js';
-import { blip } from './radio.js';
+import { city } from '../world/city.js';
+import { player } from '../gameplay/player.js';
+import { police } from '../gameplay/police.js';
+import { ms, nextMission } from '../gameplay/missions.js';
+import { listSlots, latestSlot } from '../core/save.js';
+import { game, completion } from '../core/state.js';
+import { sky } from '../world/daylight.js';
+import { blip } from '../audio/radio.js';
 
 let root, actions = {}, titleSel = 0, pauseTab = 'map', pauseSel = 0, titleItems = [];
 const KEYS = [

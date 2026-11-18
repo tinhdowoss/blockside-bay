@@ -1,11 +1,11 @@
 // Round, camera-rotated minimap and the shared top-down city map image (also used by the pause MAP tab).
-import { CELL, GRID_N, CITY_SIZE, OCEAN_X, ROAD_W } from './config.js';
-import { city, PIER_Z, PIER_LEN } from './city.js';
-import { player } from './player.js';
-import { police } from './police.js';
-import { shooters } from './combat.js';
-import { missionGoal, ms, nextMission } from './missions.js';
-import { vehicles } from './vehicles.js';
+import { CELL, GRID_N, CITY_SIZE, OCEAN_X, ROAD_W } from '../core/config.js';
+import { city, PIER_Z, PIER_LEN } from '../world/city.js';
+import { player } from '../gameplay/player.js';
+import { police } from '../gameplay/police.js';
+import { shooters } from '../gameplay/combat.js';
+import { missionGoal, ms, nextMission } from '../gameplay/missions.js';
+import { vehicles } from '../gameplay/vehicles.js';
 
 const PX = 2;                 // map pixels per world unit
 const ORIGIN = { x: -60, z: -60 };

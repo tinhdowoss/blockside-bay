@@ -1,16 +1,16 @@
 // Mission runner: start markers, stage objectives, timers, enemy squads, rewards, pass/fail.
-import { MISSIONS } from './missions-data.js';
-import { city, collideCircle } from './city.js';
-import { makeMarker } from './models.js';
+import { MISSIONS } from '../data/missions-data.js';
+import { city, collideCircle } from '../world/city.js';
+import { makeMarker } from '../world/models.js';
 import { Vehicle } from './vehicles.js';
 import { player } from './player.js';
 import { police, setWanted } from './police.js';
 import { spawnShooter, shooters, clearShooters } from './combat.js';
-import { say, clearDialogue } from './dialogue.js';
-import { sky, setHour } from './daylight.js';
-import { game, emit, addCash, bumpSkill } from './state.js';
-import { CAST } from './cast.js';
-import { rand } from './rng.js';
+import { say, clearDialogue } from '../ui/dialogue.js';
+import { sky, setHour } from '../world/daylight.js';
+import { game, emit, addCash, bumpSkill } from '../core/state.js';
+import { CAST } from '../data/cast.js';
+import { rand } from '../core/rng.js';
 
 export const ms = { def: null, stage: -1, timer: 0, enemies: [], target: null, vehicle: null, failT: 0 };
 let scene, startMarker, goalMarker;

@@ -1,14 +1,14 @@
 // HUD: mission panel, police-response list, clock, cash, wanted stars, weapon slots and ammo,
 // health/armor, speedometer + car name, radio panel, crosshair, popups, banners and toasts.
-import { WEAPONS } from './config.js';
-import { game, on } from './state.js';
-import { player } from './player.js';
-import { police, responseList } from './police.js';
-import { objectiveInfo } from './missions.js';
-import { sky } from './daylight.js';
-import { districtAt } from './city.js';
-import { isReloading } from './combat.js';
-import { radioInfo } from './radio.js';
+import { WEAPONS } from '../core/config.js';
+import { game, on } from '../core/state.js';
+import { player } from '../gameplay/player.js';
+import { police, responseList } from '../gameplay/police.js';
+import { objectiveInfo } from '../gameplay/missions.js';
+import { sky } from '../world/daylight.js';
+import { districtAt } from '../world/city.js';
+import { isReloading } from '../gameplay/combat.js';
+import { radioInfo } from '../audio/radio.js';
 
 const THREE = window.THREE;
 let root, camera, els = {};

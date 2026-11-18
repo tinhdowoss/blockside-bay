@@ -1,12 +1,12 @@
 // The player on foot (walk, sprint, collide) and the camera: over-shoulder on foot, smooth chase cam in a car.
-import { PLAYER } from './config.js';
-import { makeCharacter, animateCharacter } from './models.js';
-import { collideCircle, rayBuildings } from './city.js';
+import { PLAYER } from '../core/config.js';
+import { makeCharacter, animateCharacter } from '../world/models.js';
+import { collideCircle, rayBuildings } from '../world/city.js';
 import { vehicles } from './vehicles.js';
-import { input, key } from './input.js';
-import { fx } from './effects.js';
-import { game, bumpSkill } from './state.js';
-import { CAST } from './cast.js';
+import { input, key } from '../core/input.js';
+import { fx } from '../fx/effects.js';
+import { game, bumpSkill } from '../core/state.js';
+import { CAST } from '../data/cast.js';
 
 const THREE = window.THREE;
 

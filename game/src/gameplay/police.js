@@ -1,13 +1,13 @@
 // Wanted level (0-5 stars) and the police response: pursuit and ramming cars, roadblocks at 4+,
 // a helicopter with a searchlight at 3+. Break line of sight long enough and the stars cool down.
-import { WANTED, CELL, GRID_N } from './config.js';
-import { nodePos, nearestNode, nodeNeighbors, sightBlocked } from './city.js';
+import { WANTED, CELL, GRID_N } from '../core/config.js';
+import { nodePos, nearestNode, nodeNeighbors, sightBlocked } from '../world/city.js';
 import { Vehicle, vehicles } from './vehicles.js';
-import { makeHelicopter } from './models.js';
-import { glowTexture } from './textures.js';
+import { makeHelicopter } from '../world/models.js';
+import { glowTexture } from '../world/textures.js';
 import { player } from './player.js';
-import { game, emit } from './state.js';
-import { rand, pick } from './rng.js';
+import { game, emit } from '../core/state.js';
+import { rand, pick } from '../core/rng.js';
 
 const THREE = window.THREE;
 export const police = {

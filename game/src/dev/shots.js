@@ -1,23 +1,23 @@
 // Screenshot staging: index.html?shot=<name>&seed=1 builds a deterministic scene with the game's own
 // systems (no faked pixels), freezes the simulation and sets window.__shotReady = true.
-import { CELL } from './config.js';
-import { city } from './city.js';
-import { setHour, sky } from './daylight.js';
-import { Vehicle, vehicles } from './vehicles.js';
-import { player, placePlayer, setCameraPose, syncModel } from './player.js';
-import { stealVehicle } from './carjack.js';
-import { police, setWanted, spawnUnit, placeHeli, placeRoadblockAt } from './police.js';
-import { spawnShooter, shooters } from './combat.js';
-import { startMission, ms } from './missions.js';
-import { MISSIONS } from './missions-data.js';
-import { showLine } from './dialogue.js';
-import { setStation, setRadioPlaying } from './radio.js';
-import { holdPopup, clearCenterText } from './hud.js';
-import { flash, holdFlash, tracer, smoke, sparks, spawn } from './effects.js';
-import { spawnTrafficOn } from './traffic.js';
-import { spawnPed, peds, removePed } from './pedestrians.js';
-import { game } from './state.js';
-import { saveGame } from './save.js';
+import { CELL } from '../core/config.js';
+import { city } from '../world/city.js';
+import { setHour, sky } from '../world/daylight.js';
+import { Vehicle, vehicles } from '../gameplay/vehicles.js';
+import { player, placePlayer, setCameraPose, syncModel } from '../gameplay/player.js';
+import { stealVehicle } from '../gameplay/carjack.js';
+import { police, setWanted, spawnUnit, placeHeli, placeRoadblockAt } from '../gameplay/police.js';
+import { spawnShooter, shooters } from '../gameplay/combat.js';
+import { startMission, ms } from '../gameplay/missions.js';
+import { MISSIONS } from '../data/missions-data.js';
+import { showLine } from '../ui/dialogue.js';
+import { setStation, setRadioPlaying } from '../audio/radio.js';
+import { holdPopup, clearCenterText } from '../ui/hud.js';
+import { flash, holdFlash, tracer, smoke, sparks, spawn } from '../fx/effects.js';
+import { spawnTrafficOn } from '../world/traffic.js';
+import { spawnPed, peds, removePed } from '../world/pedestrians.js';
+import { game } from '../core/state.js';
+import { saveGame } from '../core/save.js';
 
 const THREE = window.THREE;
 

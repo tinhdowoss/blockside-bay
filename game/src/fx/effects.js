@@ -1,6 +1,6 @@
 // Particles (smoke, sparks, debris), muzzle flashes, bullet tracers and camera shake.
-import { glowTexture } from './textures.js';
-import { rand } from './rng.js';
+import { glowTexture } from '../world/textures.js';
+import { rand } from '../core/rng.js';
 
 const THREE = window.THREE;
 const MAX = 600;

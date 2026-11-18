@@ -1,9 +1,9 @@
 // Save slots in localStorage: progress, money, weapons, skills, stats, time of day and position.
 import { SAVE_KEY, SAVE_SLOTS } from './config.js';
 import { game, completion } from './state.js';
-import { player } from './player.js';
-import { sky } from './daylight.js';
-import { districtAt } from './city.js';
+import { player } from '../gameplay/player.js';
+import { sky } from '../world/daylight.js';
+import { districtAt } from '../world/city.js';
 
 const store = () => { try { return window.localStorage; } catch { return null; } };
 

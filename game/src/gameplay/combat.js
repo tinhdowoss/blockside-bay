@@ -1,17 +1,17 @@
 // Combat: fists, pistol and SMG with mouse aim; health/armor; gang members and foot cops who shoot back;
 // headshots pay a bonus and pop a HEADSHOT label.
-import { WEAPONS, HEADSHOT_BONUS } from './config.js';
-import { MISSIONS } from './missions-data.js';
-import { makeCharacter, animateCharacter } from './models.js';
-import { collideCircle, rayBuildings, sightBlocked } from './city.js';
+import { WEAPONS, HEADSHOT_BONUS } from '../core/config.js';
+import { MISSIONS } from '../data/missions-data.js';
+import { makeCharacter, animateCharacter } from '../world/models.js';
+import { collideCircle, rayBuildings, sightBlocked } from '../world/city.js';
 import { player } from './player.js';
-import { peds, knockDown } from './pedestrians.js';
+import { peds, knockDown } from '../world/pedestrians.js';
 import { vehicles } from './vehicles.js';
 import { police, addWanted } from './police.js';
-import { input, tapped } from './input.js';
-import { game, emit, addCash, bumpSkill } from './state.js';
-import { flash, tracer, blood, sparks, fx } from './effects.js';
-import { rand, range } from './rng.js';
+import { input, tapped } from '../core/input.js';
+import { game, emit, addCash, bumpSkill } from '../core/state.js';
+import { flash, tracer, blood, sparks, fx } from '../fx/effects.js';
+import { rand, range } from '../core/rng.js';
 
 const THREE = window.THREE;
 export const shooters = [];

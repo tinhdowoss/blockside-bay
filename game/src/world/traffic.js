@@ -1,9 +1,9 @@
 // Civilian traffic: cars follow the right-hand lane of the road grid, turn at junctions and brake for obstacles.
-import { CELL, GRID_N, TRAFFIC_MODELS } from './config.js';
+import { CELL, GRID_N, TRAFFIC_MODELS } from '../core/config.js';
 import { nodePos, nodeNeighbors, nearestNode } from './city.js';
-import { Vehicle, vehicles } from './vehicles.js';
-import { rand, pick, irange } from './rng.js';
-import { emit } from './state.js';
+import { Vehicle, vehicles } from '../gameplay/vehicles.js';
+import { rand, pick, irange } from '../core/rng.js';
+import { emit } from '../core/state.js';
 
 const LANE = 3;
 const TARGET_COUNT = 24;

@@ -1,26 +1,29 @@
 // BLOCKSIDE BAY — boot, main loop and game states (title, play, pause, down).
 import { CITY_SIZE } from './config.js';
 import { setSeed } from './rng.js';
-import { buildCity, updateCity, city } from './city.js';
-import { setupSky, updateSky, sky, setHour } from './daylight.js';
-import { setupEffects, updateEffects } from './effects.js';
-import { setupVehicles, updateVehicles, vehicles, Vehicle } from './vehicles.js';
-import { setupPlayer, updatePlayer, updateCamera, placePlayer, player, syncModel, setCameraPose } from './player.js';
+import { buildCity, updateCity, city } from '../world/city.js';
+import { setupSky, updateSky, sky, setHour } from '../world/daylight.js';
+import { setupEffects, updateEffects } from '../fx/effects.js';
+import { setupVehicles, updateVehicles, vehicles, Vehicle } from '../gameplay/vehicles.js';
+import { setupPlayer, updatePlayer, updateCamera, placePlayer, player, syncModel, setCameraPose } from '../gameplay/player.js';
 import { setupInput, endFrame, input, tapped } from './input.js';
-import { populateTraffic, updateTraffic } from './traffic.js';
-import { setupPedestrians, populatePeds, updatePeds, peds } from './pedestrians.js';
-import { toggleVehicle, exitVehicle } from './carjack.js';
-import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from './police.js';
-import { setupCombat, updateCombat, shooters, clearShooters } from './combat.js';
-import { setupMissions, updateMissions, failMission, ms } from './missions.js';
-import { setupDialogue, updateDialogue, say, clearDialogue } from './dialogue.js';
-import { setupHud, updateHud, showHud, showDown } from './hud.js';
-import { setupMinimap, drawMinimap } from './minimap.js';
-import { initAudio, updateAudio, setRadioPlaying, nextStation, setupAudioEvents, setVolume } from './radio.js';
-import { setupMenus, showTitle, hideMenus, openPause, menuKey } from './menus.js';
+import { populateTraffic, updateTraffic } from '../world/traffic.js';
+import { setupPedestrians, populatePeds, updatePeds, peds } from '../world/pedestrians.js';
+import { toggleVehicle, exitVehicle } from '../gameplay/carjack.js';
+import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from '../gameplay/police.js';
+import { setupCombat, updateCombat, shooters, clearShooters } from '../gameplay/combat.js';
+import { setupMissions, updateMissions, failMission, ms } from '../gameplay/missions.js';
+import { setupDialogue, updateDialogue, say, clearDialogue } from '../ui/dialogue.js';
+import { setupHud, updateHud, showHud, showDown } from '../ui/hud.js';
+import { setupMinimap, drawMinimap } from '../ui/minimap.js';
+import { initAudio, updateAudio, setRadioPlaying, nextStation, setupAudioEvents, setVolume } from '../audio/radio.js';
+import { setupMenus, showTitle, hideMenus, openPause, menuKey } from '../ui/menus.js';
 import { saveGame, loadGame } from './save.js';
 import { game, on, emit } from './state.js';
-import { stageShot } from './shots.js';
+import { stageShot } from '../dev/shots.js';
+import { setupPost, resizePost, renderFrame, post } from '../fx/post.js';
+import { loadSettings, applySettings, saveSettings } from './settings.js';
+import { applyGrade } from '../fx/grade.js';
 
 const THREE = window.THREE;
 const params = new URLSearchParams(location.search);
@@ -30,7 +33,7 @@ setSeed(Number(params.get('seed') || 1));
 // ---- Renderer + world -------------------------------------------------------------------
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: !!SHOT });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -38,6 +41,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 2600);
 
+setupPost(renderer);
+loadSettings(renderer, !!SHOT);
 buildCity(scene);
 setupSky(scene);
 setupEffects(scene);
@@ -61,6 +66,7 @@ document.addEventListener('pointerlockchange', () => {
 
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
+  resizePost();
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 });
@@ -155,10 +161,16 @@ function quitToTitle() {
 }
 
 function setting(id, d) {
-  if (id === 'music') { game.musicVol = Math.max(0, Math.min(0.64, (game.musicVol ?? 0.32) + d * 0.032)); }
-  if (id === 'sfx') { game.sfxVol = Math.max(0, Math.min(1, (game.sfxVol ?? 0.8) + d * 0.1)); setVolume(game.musicVol ?? 0.32, game.sfxVol); }
-  if (id === 'sens') game.sens = Math.max(0.2, Math.min(2, (game.sens ?? 1) + d * 0.2));
-  if (id === 'shadows') { game.shadows = game.shadows === false; renderer.shadowMap.enabled = game.shadows !== false; }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  if (id === 'music') game.musicVol = clamp((game.musicVol ?? 0.32) + d * 0.032, 0, 0.64);
+  if (id === 'sfx') game.sfxVol = clamp((game.sfxVol ?? 0.8) + d * 0.1, 0, 1);
+  if (id === 'sens') game.sens = clamp((game.sens ?? 1) + d * 0.2, 0.2, 2);
+  if (id === 'shadows') game.shadows = game.shadows === false;
+  if (id === 'quality') game.quality = game.quality === 'LOW' ? 'HIGH' : 'LOW';
+  if (id === 'shake') game.shake = game.shake === false;
+  setVolume(game.musicVol, game.sfxVol);
+  applySettings();
+  saveSettings();
 }
 
 function onKey(code) {
@@ -259,7 +271,8 @@ function render(dt, now) {
   for (const v of vehicles) if (v.siren) sirenD = Math.min(sirenD, Math.hypot(v.x - player.x, v.z - player.z));
   updateAudio(player.vehicle ? player.vehicle.speed : null, player.vehicle ? player.vehicle.spec.top : 1, sirenD);
   updateHeliGlare(camera);
-  renderer.render(scene, camera);
+  applyGrade(night, sky.hour);
+  renderFrame(scene, camera, now);
 }
 
 function frame() {

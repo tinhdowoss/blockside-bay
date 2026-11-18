@@ -1,10 +1,10 @@
 // Vehicles: arcade driving model with handbrake drift, building and car collisions, damage and sirens.
-import { CAR_MODELS } from './config.js';
-import { makeCar } from './models.js';
-import { collideCircle } from './city.js';
-import { sparks, smoke, explosion, fx } from './effects.js';
-import { emit } from './state.js';
-import { pick } from './rng.js';
+import { CAR_MODELS } from '../core/config.js';
+import { makeCar } from '../world/models.js';
+import { collideCircle } from '../world/city.js';
+import { sparks, smoke, explosion, fx } from '../fx/effects.js';
+import { emit } from '../core/state.js';
+import { pick } from '../core/rng.js';
 
 const THREE = window.THREE;
 export const vehicles = [];
@@ -132,8 +132,9 @@ export class Vehicle {
       const [r, b] = this.mesh.userData.lights;
       const on = this.siren;
       const ph = Math.floor(t * 8) % 2;
-      r.material.color.set(on ? (ph ? '#ff2040' : '#b01030') : '#500010');
-      b.material.color.set(on ? (ph ? '#2050c0' : '#2a80ff') : '#102050');
+      // Light bars run hot (above 1) so the bloom pass turns them into flares.
+      r.material.color.set(on ? (ph ? '#ff2040' : '#b01030') : '#500010').multiplyScalar(on && ph ? 4 : 1.3);
+      b.material.color.set(on ? (ph ? '#2050c0' : '#2a80ff') : '#102050').multiplyScalar(on && !ph ? 4 : 1.3);
       r.userData.glow.visible = b.userData.glow.visible = on;
       r.userData.glow.scale.setScalar(ph ? 4 : 2.2);
       b.userData.glow.scale.setScalar(ph ? 2.2 : 4);

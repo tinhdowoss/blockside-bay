@@ -1,8 +1,8 @@
 // WebAudio sound: three procedural radio stations (synthwave, bay house, tropical brass) plus engine,
 // siren, gunshot, punch, crash, horn and jingle effects. Nothing is loaded from files.
-import { STATIONS } from './config.js';
-import { makeRng } from './rng.js';
-import { game, on } from './state.js';
+import { STATIONS } from '../core/config.js';
+import { makeRng } from '../core/rng.js';
+import { game, on } from '../core/state.js';
 
 let ac = null, master, musicBus, sfxBus, analyser, noiseBuf;
 let engine = null, siren = null;

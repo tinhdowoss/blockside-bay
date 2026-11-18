@@ -1,7 +1,7 @@
 // Tiny pixel-art canvas textures (16x16 and friends) rendered with NearestFilter.
-import { makeRng } from './rng.js';
-import { drawPixelText, textWidth } from './pixelfont.js';
-import { shade } from './cast.js';
+import { makeRng } from '../core/rng.js';
+import { drawPixelText, textWidth } from '../ui/pixelfont.js';
+import { shade } from '../data/cast.js';
 
 const THREE = window.THREE;
 const cache = new Map();

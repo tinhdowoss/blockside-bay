@@ -1,8 +1,9 @@
 // Grid city: districts, roads, sidewalks, art-deco buildings, palms, beach, ocean, pier and neon.
-import { CELL, ROAD_W, GRID_N, CITY_SIZE, OCEAN_X, DISTRICTS, PALETTES, BEACH_NAME } from './config.js';
-import { makeRng } from './rng.js';
+import { CELL, ROAD_W, GRID_N, CITY_SIZE, OCEAN_X, DISTRICTS, PALETTES, BEACH_NAME } from '../core/config.js';
+import { makeRng } from '../core/rng.js';
 import { Batcher } from './voxel.js';
 import * as TX from './textures.js';
+import { registerGlow } from '../fx/grade.js';
 
 const THREE = window.THREE;
 const HALF_ROAD = ROAD_W / 2;
@@ -172,7 +173,7 @@ function setupMaterials() {
   mats.bark = lambert({ map: TX.barkTexture(), vertexColors: true });
   mats.leaf = lambert({ map: TX.leafTexture(), vertexColors: true });
   mats.vc = lambert({ vertexColors: true });
-  mats.glow = new THREE.MeshBasicMaterial({ vertexColors: true });
+  mats.glow = registerGlow(new THREE.MeshBasicMaterial({ vertexColors: true }), 1, 2.8);
   mats.cloud = lambert({ map: TX.cloudTexture(), emissive: new THREE.Color('#9fb8d8'), emissiveIntensity: 0.6 });
   B = new Batcher();
   for (const k of Object.keys(mats)) B.material(k, mats[k]);
@@ -287,7 +288,7 @@ function streetLight(x, z, facing) {
 function neonSign(text, color, x, y, z, faceYaw, height = 1.6) {
   const tex = TX.neonSignTexture(text, color);
   const w = height * tex.userData.aspect;
-  const mat = new THREE.MeshBasicMaterial({ map: tex });
+  const mat = registerGlow(new THREE.MeshBasicMaterial({ map: tex }), 1, 2.2);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, height), mat);
   mesh.position.set(x, y, z);
   mesh.rotation.y = faceYaw;

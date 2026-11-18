@@ -1,5 +1,5 @@
 // Dialogue box: pixel portrait, speaker name and typewriter text; lines queue up and auto-advance.
-import { CAST, portraitURL } from './cast.js';
+import { CAST, portraitURL } from '../data/cast.js';
 
 const queue = [];
 let current = null, el, shown = 0, hold = 0;

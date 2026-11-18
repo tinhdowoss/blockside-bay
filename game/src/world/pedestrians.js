@@ -1,10 +1,10 @@
 // Pedestrians: walk the sidewalk loops around blocks, flee from gunfire and crashes, get knocked down by cars.
-import { CELL, GRID_N, ROAD_W } from './config.js';
+import { CELL, GRID_N, ROAD_W } from '../core/config.js';
 import { makeCharacter, animateCharacter } from './models.js';
 import { collideCircle } from './city.js';
-import { rand, pick, irange } from './rng.js';
-import { emit, on } from './state.js';
-import { blood } from './effects.js';
+import { rand, pick, irange } from '../core/rng.js';
+import { emit, on } from '../core/state.js';
+import { blood } from '../fx/effects.js';
 
 const THREE = window.THREE;
 export const peds = [];

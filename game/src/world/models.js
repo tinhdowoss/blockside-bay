@@ -1,12 +1,13 @@
 // Voxel models: blocky people, cars and the police helicopter, built from vertex-coloured boxes.
 import { Batcher } from './voxel.js';
-import { CAR_MODELS } from './config.js';
-import { shade } from './cast.js';
+import { CAR_MODELS } from '../core/config.js';
+import { shade } from '../data/cast.js';
 import { glowTexture } from './textures.js';
+import { registerGlow } from '../fx/grade.js';
 
 const THREE = window.THREE;
 export const bodyMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-export const glowMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+export const glowMat = registerGlow(new THREE.MeshBasicMaterial({ vertexColors: true }), 1.15, 3);
 export const redLightMat = new THREE.MeshBasicMaterial({ color: 0xff1030 });
 export const blueLightMat = new THREE.MeshBasicMaterial({ color: 0x1060ff });
 

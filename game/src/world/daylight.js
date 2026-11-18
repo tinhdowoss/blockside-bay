@@ -1,6 +1,6 @@
 // Sky dome, sun, hemisphere light, fog and the day/night cycle (0..24 hours).
 import { city } from './city.js';
-import { makeRng } from './rng.js';
+import { makeRng } from '../core/rng.js';
 
 const THREE = window.THREE;
 

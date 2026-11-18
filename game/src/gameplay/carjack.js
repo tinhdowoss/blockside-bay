@@ -1,10 +1,10 @@
 // Entering, leaving and stealing cars (F). Pulling a driver out is a crime: +1 wanted star.
 import { player, snapCamera } from './player.js';
 import { nearestVehicle } from './vehicles.js';
-import { spawnPed, peds } from './pedestrians.js';
+import { spawnPed, peds } from '../world/pedestrians.js';
 import { addWanted, detachUnit } from './police.js';
-import { game, emit, bumpSkill } from './state.js';
-import { CELL, GRID_N } from './config.js';
+import { game, emit, bumpSkill } from '../core/state.js';
+import { CELL, GRID_N } from '../core/config.js';
 
 const REACH = 5;
 
