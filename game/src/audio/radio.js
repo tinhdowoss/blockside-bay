@@ -5,7 +5,7 @@ import { makeRng } from '../core/rng.js';
 import { game, on } from '../core/state.js';
 
 let ac = null, master, musicBus, sfxBus, analyser, noiseBuf;
-let engine = null, siren = null;
+let engine = null, siren = null, screech = null;
 let station = 0, nextBeat = 0, step = 0, pattern = null;
 const levels = new Array(7).fill(0.1);
 let radioOn = false;
@@ -138,8 +138,9 @@ export function jingle(ok = true) {
   notes.forEach((n, i) => tone('square', midi(n), t + i * 0.12, 0.3, 0.12, sfxBus, 3000));
 }
 
-// Engine hum follows the player's car; the siren swells with the nearest police light bar.
-export function updateAudio(carSpeed, carTop, sirenDist) {
+// Engine hum follows the player's car (pitch climbs through each gear and drops on the shift), tyres
+// screech while they slide, and the siren swells with the nearest police light bar.
+export function updateAudio(carSpeed, carTop, sirenDist, skid = 0) {
   if (!ac) return;
   if (!engine) {
     const o = ac.createOscillator(), o2 = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
@@ -151,6 +152,10 @@ export function updateAudio(carSpeed, carTop, sirenDist) {
     const sf = ac.createBiquadFilter(); sf.type = 'lowpass'; sf.frequency.value = 2200;
     lfo.connect(lg); lg.connect(so.frequency); so.connect(sf); sf.connect(sg); sg.connect(sfxBus); so.start(); lfo.start();
     siren = { g: sg };
+    const ns = ac.createBufferSource(), bp = ac.createBiquadFilter(), ng = ac.createGain();
+    ns.buffer = noiseBuf; ns.loop = true; bp.type = 'bandpass'; bp.frequency.value = 2100; bp.Q.value = 7; ng.gain.value = 0;
+    ns.connect(bp); bp.connect(ng); ng.connect(sfxBus); ns.start();
+    screech = { g: ng, f: bp };
   }
   const t = ac.currentTime;
   const on_ = carSpeed != null && game.mode === 'play';
@@ -162,16 +167,17 @@ export function updateAudio(carSpeed, carTop, sirenDist) {
   engine.g.gain.setTargetAtTime(on_ ? 0.05 + k * 0.06 : 0, t, 0.1);
   const sv = sirenDist < 120 && game.mode === 'play' ? 0.05 * (1 - sirenDist / 120) : 0;
   siren.g.gain.setTargetAtTime(sv, t, 0.2);
+  screech.g.gain.setTargetAtTime(on_ ? skid * 0.22 : 0, t, 0.05);
+  screech.f.frequency.setTargetAtTime(1700 + skid * 900 + k * 400, t, 0.1);
 }
 
-export function radioInfo() {
+export function radioInfo(t = performance.now() / 1000) {
   const st = STATIONS[station];
   if (analyser && radioOn) {
     const a = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(a);
     for (let i = 0; i < 7; i++) levels[i] = levels[i] * 0.6 + (a[1 + i * 3] / 255) * 0.4;
   } else {
-    const t = performance.now() / 1000;
     for (let i = 0; i < 7; i++) levels[i] = st.style === 'off' ? 0.05 : 0.35 + 0.35 * Math.abs(Math.sin(t * (2 + i * 0.7) + i));
   }
   return { ...st, levels };

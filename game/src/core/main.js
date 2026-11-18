@@ -31,6 +31,8 @@ const THREE = window.THREE;
 const params = new URLSearchParams(location.search);
 const SHOT = params.get('shot');
 setSeed(Number(params.get('seed') || 1));
+// Screenshot mode: CSS blink animations sit still so captures are repeatable.
+if (SHOT) document.body.classList.add('shot');
 
 // ---- Renderer + world -------------------------------------------------------------------
 const canvas = document.getElementById('view');
@@ -237,7 +239,7 @@ function respawn() {
 }
 
 // ---- Loop -------------------------------------------------------------------------------
-let last = performance.now() / 1000, t = 0, frozen = false;
+let last = SHOT ? 12.5 : performance.now() / 1000, t = 0, frozen = false;
 export const loop = { step, render, freeze: (f) => { frozen = f; } };
 
 function step(dt) {
@@ -270,10 +272,11 @@ function render(dt, now) {
     const a = now * 0.05;
     setCameraPose(SHOWCASE.x - 9 + Math.sin(a) * 2, 2.6, SHOWCASE.z + 7 + Math.cos(a) * 1.5, SHOWCASE.x - 1.5, 1.6, SHOWCASE.z - 1);
   } else if (game.mode !== 'title' && !frozen) updateCamera(dt, now);
-  if (game.mode === 'play' || game.mode === 'down' || SHOT) { updateHud(dt); drawMinimap(t); }
+  if (game.mode === 'play' || game.mode === 'down' || SHOT) { updateHud(dt, now); drawMinimap(t); }
   let sirenD = 999;
   for (const v of vehicles) if (v.siren) sirenD = Math.min(sirenD, Math.hypot(v.x - player.x, v.z - player.z));
-  updateAudio(player.vehicle ? player.vehicle.speed : null, player.vehicle ? player.vehicle.spec.top : 1, sirenD);
+  const pv = player.vehicle;
+  updateAudio(pv ? pv.speed : null, pv ? pv.spec.top : 1, sirenD, pv ? pv.skid || 0 : 0);
   updateHeliGlare(camera, night);
   if (game.mode !== 'play' && !SHOT) post.speed = 0;
   applyGrade(night, sky.hour);
@@ -281,7 +284,8 @@ function render(dt, now) {
 }
 
 function frame() {
-  const now = performance.now() / 1000;
+  // Staged screenshots run on a pinned clock so every capture of a scene is identical.
+  const now = SHOT ? 12.5 : performance.now() / 1000;
   const dt = Math.min(0.05, now - last);
   last = now;
   if (!frozen) step(dt);

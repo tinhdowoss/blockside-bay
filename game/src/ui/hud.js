@@ -178,7 +178,7 @@ function updateWeapons() {
   setHTML(els.ammo, 'ammo', w.clip ? (isReloading() ? 'RELOADING' : `${game.clip[w.id]} <small>/ ${game.ammo[w.id]}</small>`) : '<small>MELEE</small>');
 }
 
-function updateSpeedo(v) {
+function updateSpeedo(v, now) {
   els.speedo.style.display = v ? 'block' : 'none';
   els.radio.style.display = v ? 'flex' : 'none';
   if (!v) return;
@@ -196,7 +196,7 @@ function updateSpeedo(v) {
   cb.style.background = hp > 60 ? '#5dff6a' : hp > 30 ? '#ffd23f' : '#ff3f5f';
   els.speedo.querySelector('.cpct').textContent = `${hp}%`;
   setHTML(els.speedo.querySelector('.car'), 'car', `${v.spec.name}${v.stolen ? ' <em>STOLEN</em>' : ''}`);
-  const r = radioInfo();
+  const r = radioInfo(now);
   els.radio.querySelector('.st').textContent = r.name;
   els.radio.querySelector('.st').style.color = r.color;
   els.radio.querySelector('.tag').textContent = r.tag ? `${r.tag}  ·  E: NEXT` : 'E: NEXT STATION';
@@ -204,7 +204,7 @@ function updateSpeedo(v) {
   els.radio.querySelectorAll('.eq i').forEach((b, i) => { b.style.height = `${r.levels[i] * 24 + 2}px`; b.style.background = r.color; });
 }
 
-export function updateHud(dt) {
+export function updateHud(dt, now = performance.now() / 1000) {
   updateMission();
   updateRep(dt);
   updateResponse();
@@ -229,7 +229,7 @@ export function updateHud(dt) {
   els.district.style.color = d.color;
 
   const v = player.vehicle;
-  updateSpeedo(v);
+  updateSpeedo(v, now);
 
   // Crosshair on foot with a gun
   els.crosshair.style.display = !v && game.mode === 'play' && (game.weapon > 0 || player.aiming) ? 'block' : 'none';

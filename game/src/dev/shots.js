@@ -11,7 +11,7 @@ import { police, setWanted, spawnUnit, placeHeli, placeRoadblockAt } from '../ga
 import { spawnShooter, shooters, damageCharacter } from '../gameplay/combat.js';
 import { startMission, ms } from '../gameplay/missions.js';
 import { MISSIONS } from '../data/missions-data.js';
-import { showLine } from '../ui/dialogue.js';
+import { showLine, clearDialogue } from '../ui/dialogue.js';
 import { setStation, setRadioPlaying } from '../audio/radio.js';
 import { holdPopup, clearCenterText } from '../ui/hud.js';
 import { flash, holdFlash, tracer, sparks, spawn, tyreSmoke, updateEffects } from '../fx/effects.js';
@@ -122,7 +122,7 @@ const SCENES = {
     ];
     crowd.forEach(([x, z, st, yaw], i) => stagePed(x, z, st, yaw, i * 1.7));
     setStation(0); setRadioPlaying(true);
-    showLine('mari', "You've got the whole BBPD on your bumper. Lose them before the yacht leaves Coral Pier!");
+    clearDialogue();
     player.camYaw = Math.PI;
     player.model.visible = false;
     post.speed = speedRush(car) * 0.85;

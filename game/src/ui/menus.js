@@ -181,7 +181,7 @@ function pauseBody() {
 }
 
 function settingsHTML() {
-  const rows = [['music', 'MUSIC', Math.round((game.musicVol ?? 0.32) * 100 / 0.32 / 10)], ['sfx', 'EFFECTS', Math.round((game.sfxVol ?? 0.8) * 10)], ['sens', 'MOUSE', Math.round((game.sens ?? 1) * 5)], ['shadows', 'SHADOWS', game.shadows === false ? 'OFF' : 'ON']];
+  const rows = [['music', 'MUSIC', Math.round((game.musicVol ?? 0.32) * 100 / 0.32 / 10)], ['sfx', 'EFFECTS', Math.round((game.sfxVol ?? 0.8) * 10)], ['sens', 'MOUSE', Math.round((game.sens ?? 1) * 5)], ['shadows', 'SHADOWS', game.shadows === false ? 'OFF' : 'ON'], ['quality', 'GRAPHICS', game.quality === 'LOW' ? 'LOW' : 'HIGH'], ['shake', 'CAM SHAKE', game.shake === false ? 'OFF' : 'ON']];
   return `<div class="settings"><h3 style="color:#ffd23f">SETTINGS</h3>${rows.map(([id, l, v]) => `<div class="row"><span style="width:120px">${l}</span><span class="btn" data-set="${id}" data-d="-1">-</span><b style="width:50px;text-align:center">${v}</b><span class="btn" data-set="${id}" data-d="1">+</span></div>`).join('')}</div>`;
 }
 

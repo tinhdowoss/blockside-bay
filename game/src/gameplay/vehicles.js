@@ -91,6 +91,7 @@ export class Vehicle {
     const slide = Math.max(0, this.drift - 2.5) / 6;
     const lock = (c.handbrake || c.brake > 0.5) && vf > 9 ? 0.6 : 0;
     const skid = Math.min(1, Math.max(slide, lock)) * (this.speed > 6 ? 1 : 0);
+    this.skid = skid;
     skidCar(this, skid);
     if (skid > 0.25 && Math.random() < skid * 0.9) tyreSmoke(this.x - nfx * s.len * 0.32, this.z - nfz * s.len * 0.32, this.vx, this.vz);
     if (this.health < 35 && !this.wrecked && Math.random() < 0.3) smoke(this.x + nfx * 1.8, 1.2, this.z + nfz * 1.8, this.health < 15 ? '#2a2a2a' : '#666666', 1, { size: 0.8, grow: 2.5 });
