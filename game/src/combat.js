@@ -1,6 +1,7 @@
 // Combat: fists, pistol and SMG with mouse aim; health/armor; gang members and foot cops who shoot back;
 // headshots pay a bonus and pop a HEADSHOT label.
 import { WEAPONS, HEADSHOT_BONUS } from './config.js';
+import { MISSIONS } from './missions-data.js';
 import { makeCharacter, animateCharacter } from './models.js';
 import { collideCircle, rayBuildings, sightBlocked } from './city.js';
 import { player } from './player.js';
@@ -290,7 +291,13 @@ export function updateCombat(dt, t) {
   if (reloadT > 0) reloadT -= dt;
   if (tapped('Tab') || tapped('KeyQ')) cycleWeapon(1);
   if (input.wheel) cycleWeapon(input.wheel > 0 ? 1 : -1);
-  for (const [k, i] of [['Digit1', 0], ['Digit2', 1], ['Digit3', 2]]) if (tapped(k) && game.weapons[WEAPONS[i].id]) { game.weapon = i; emit('weapon', WEAPONS[i]); }
+  for (const [k, i] of [['Digit1', 0], ['Digit2', 1], ['Digit3', 2]]) {
+    if (!tapped(k)) continue;
+    if (game.weapons[WEAPONS[i].id]) { game.weapon = i; reloadT = 0; emit('weapon', WEAPONS[i]); continue; }
+    // Story weapons unlock through missions: say which chapter instead of silently ignoring the key.
+    const m = MISSIONS.find((d) => d.unlock === WEAPONS[i].id);
+    emit('toast', { text: `${WEAPONS[i].name} LOCKED - unlocks in CH ${m ? m.chapter : '?'}`, color: '#ffd23f' });
+  }
   if (tapped('KeyR')) reload();
   const w = currentWeapon();
   const wantsFire = w.auto ? input.fire : input.firePressed;

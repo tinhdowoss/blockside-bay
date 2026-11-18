@@ -10,7 +10,7 @@ import { setupInput, endFrame, input, tapped } from './input.js';
 import { populateTraffic, updateTraffic } from './traffic.js';
 import { setupPedestrians, populatePeds, updatePeds, peds } from './pedestrians.js';
 import { toggleVehicle, exitVehicle } from './carjack.js';
-import { setupPolice, updatePolice, police, clearWanted } from './police.js';
+import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from './police.js';
 import { setupCombat, updateCombat, shooters, clearShooters } from './combat.js';
 import { setupMissions, updateMissions, failMission, ms } from './missions.js';
 import { setupDialogue, updateDialogue, say, clearDialogue } from './dialogue.js';
@@ -258,6 +258,7 @@ function render(dt, now) {
   let sirenD = 999;
   for (const v of vehicles) if (v.siren) sirenD = Math.min(sirenD, Math.hypot(v.x - player.x, v.z - player.z));
   updateAudio(player.vehicle ? player.vehicle.speed : null, player.vehicle ? player.vehicle.spec.top : 1, sirenD);
+  updateHeliGlare(camera);
   renderer.render(scene, camera);
 }
 

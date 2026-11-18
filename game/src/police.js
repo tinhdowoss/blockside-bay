@@ -69,7 +69,22 @@ function spawnPursuit() {
   return null;
 }
 
+// A unit only counts while a cop is still at the wheel; the player can take one with F.
+const manned = (v) => v.driver === 'police' && !!v.ai && !v.wrecked && vehicles.includes(v);
+
+// The player took this car: it stops being a pursuit unit or part of any roadblock.
+export function detachUnit(v) {
+  const i = police.units.indexOf(v);
+  if (i >= 0) police.units.splice(i, 1);
+  for (const rb of police.roadblocks) {
+    const k = rb.cars.indexOf(v);
+    if (k >= 0) rb.cars.splice(k, 1);
+  }
+  if (v.ai) v.ai.ramming = false;
+}
+
 function releaseUnit(v) {
+  if (v.driver === 'player') return;
   v.siren = false;
   if (v.wrecked || !vehicles.includes(v)) return;
   const n = nearestNode(v.x, v.z);
@@ -98,6 +113,7 @@ function steerTo(v, tx, tz, speed, dt) {
 }
 
 function driveUnit(v, dt) {
+  if (!v.ai || !v.ai.node) return;
   const target = player.vehicle || player;
   const px = player.x, pz = player.z;
   const d = Math.hypot(px - v.x, pz - v.z);
@@ -174,6 +190,30 @@ function syncHeli(h, t, dt) {
   void t;
 }
 
+// The beam and pool are additive: seen from inside the cone they wash the whole screen white.
+// Fade the beam (and soften the pool) as the camera nears or enters the cone; from outside it keeps
+// the full searchlight look. Called every rendered frame with the camera.
+const BEAM_OPACITY = 0.16, POOL_OPACITY = 0.85, BEAM_R0 = 0.3, BEAM_R1 = 4.2;
+const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+export function updateHeliGlare(camera) {
+  const h = police.heli;
+  if (!h) return;
+  const ax = h.x, ay = h.y - 1.2, az = h.z;
+  const bx = h.aimX - ax, by = -ay, bz = h.aimZ - az;
+  const cx = camera.position.x - ax, cy = camera.position.y - ay, cz = camera.position.z - az;
+  const len2 = bx * bx + by * by + bz * bz || 1;
+  const t = Math.max(0, Math.min(1, (cx * bx + cy * by + cz * bz) / len2));
+  const px = cx - bx * t, py = cy - by * t, pz = cz - bz * t;
+  const ratio = Math.hypot(px, py, pz) / (BEAM_R0 + (BEAM_R1 - BEAM_R0) * t);
+  // ratio < 1: camera inside the cone. Fully faded inside, full strength from 3 radii out.
+  const k = smooth(1, 3, ratio);
+  h.beam.material.opacity = BEAM_OPACITY * k;
+  h.beam.visible = k > 0.01;
+  // The pool stays as a soft ring on the ground, just never a full-screen flare.
+  const near = smooth(4, 16, Math.hypot(camera.position.x - h.aimX, camera.position.z - h.aimZ));
+  h.pool.material.opacity = POOL_OPACITY * (0.45 + 0.55 * Math.max(k, near));
+}
+
 function updateHeli(dt, t) {
   const want = police.level >= WANTED.heliAt;
   if (want && !police.heli) police.heli = makeHeli();
@@ -185,11 +225,14 @@ function updateHeli(dt, t) {
     if (Math.hypot(h.x - player.x, h.z - player.z) > 220) removeHeli();
     return false;
   }
+  // Hover low, out ahead of the chase camera and swaying side to side, so the helicopter body
+  // stays in view instead of circling straight overhead.
   h.angle += dt * 0.25;
-  const tx = player.x + Math.cos(h.angle) * 26, tz = player.z + Math.sin(h.angle) * 26;
+  const ahead = player.camYaw + Math.sin(h.angle) * 0.9;
+  const tx = player.x + Math.sin(ahead) * 44, tz = player.z + Math.cos(ahead) * 44;
   const k = Math.min(1, dt * 0.9);
   h.x += (tx - h.x) * k; h.z += (tz - h.z) * k;
-  h.y += (36 - h.y) * k;
+  h.y += (15 - h.y) * k;
   // The searchlight lags behind the player; it can be shaken off under cover.
   const lag = Math.min(1, dt * 1.8);
   h.aimX += (player.x - h.aimX) * lag; h.aimZ += (player.z - h.aimZ) * lag;
@@ -231,7 +274,7 @@ export function placeRoadblockAt(x, z, alongX) {
 // ---- Main update ------------------------------------------------------------------------
 export function updatePolice(dt, t) {
   if (police.frozen) { for (const u of police.units) u.sync(t); return; }
-  police.units = police.units.filter((u) => vehicles.includes(u) && !u.wrecked);
+  police.units = police.units.filter(manned);
   if (police.level === 0) {
     for (const u of police.units) releaseUnit(u);
     police.units.length = 0;
@@ -243,7 +286,7 @@ export function updatePolice(dt, t) {
   police.ramming = false;
   for (const u of police.units) {
     driveUnit(u, dt);
-    if (u.ai.ramming) police.ramming = true;
+    if (u.ai && u.ai.ramming) police.ramming = true;
     const d = Math.hypot(u.x - player.x, u.z - player.z);
     if (d < 75 && !sightBlocked(u.x, u.z, player.x, player.z)) seen = true;
   }
@@ -256,8 +299,9 @@ export function updatePolice(dt, t) {
   for (let i = police.roadblocks.length - 1; i >= 0; i--) {
     const rb = police.roadblocks[i];
     rb.life -= dt;
+    rb.cars = rb.cars.filter(manned);
     for (const c of rb.cars) { c.controls.throttle = 0; c.controls.brake = 1; }
-    if (rb.life <= 0 || police.level === 0) { for (const c of rb.cars) releaseUnit(c); police.roadblocks.splice(i, 1); }
+    if (rb.life <= 0 || police.level === 0 || !rb.cars.length) { for (const c of rb.cars) releaseUnit(c); police.roadblocks.splice(i, 1); }
   }
   // Cool-down when nobody can see the player
   police.seen = seen;

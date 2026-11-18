@@ -2,7 +2,7 @@
 import { player, snapCamera } from './player.js';
 import { nearestVehicle } from './vehicles.js';
 import { spawnPed, peds } from './pedestrians.js';
-import { addWanted } from './police.js';
+import { addWanted, detachUnit } from './police.js';
 import { game, emit, bumpSkill } from './state.js';
 import { CELL, GRID_N } from './config.js';
 
@@ -18,6 +18,7 @@ export function toggleVehicle() {
 export function stealVehicle(v, quiet = false) {
   const hadDriver = v.driver === 'traffic' || v.driver === 'police';
   if (hadDriver) ejectDriver(v);
+  detachUnit(v);
   const crime = !v.owned;
   v.driver = 'player';
   v.ai = null;
@@ -31,9 +32,11 @@ export function stealVehicle(v, quiet = false) {
     game.stats.stolen++;
     bumpSkill('stealth', 0.01);
     if (!quiet) {
-      addWanted(v.police ? 2 : 1, v.x, v.z);
+      const stars = v.police ? 2 : 1;
+      addWanted(stars, v.x, v.z);
       emit('crime', { x: v.x, z: v.z, kind: 'carjack' });
-      emit('toast', { text: hadDriver ? 'CARJACKED!  +1 STAR' : 'CAR STOLEN  +1 STAR', color: '#ff5fa2' });
+      const tag = `+${stars} STAR${stars > 1 ? 'S' : ''}`;
+      emit('toast', { text: `${v.police ? 'COP CAR STOLEN!' : hadDriver ? 'CARJACKED!' : 'CAR STOLEN'}  ${tag}`, color: '#ff5fa2' });
     }
   }
   emit('enterVehicle', v);
