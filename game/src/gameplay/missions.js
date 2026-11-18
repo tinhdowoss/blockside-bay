@@ -1,20 +1,24 @@
-// Mission runner: start markers, stage objectives, timers, enemy squads, rewards, pass/fail.
+// Mission runner: start markers, stage objectives, timers, enemy squads, rewards, pass/fail, retry and
+// the per-run numbers (time, cash, rep, accuracy, stars evaded) shown on the results card.
 import { MISSIONS, HINTS } from '../data/missions-data.js';
 import { WEAPONS } from '../core/config.js';
-import { city, collideCircle } from '../world/city.js';
+import { city, collideCircle, snapToRoad } from '../world/city.js';
 import { makeMarker, fadeMarker } from '../world/models.js';
-import { Vehicle } from './vehicles.js';
-import { player } from './player.js';
-import { police, setWanted } from './police.js';
+import { Vehicle, nearestVehicle } from './vehicles.js';
+import { player, placePlayer } from './player.js';
+import { police, setWanted, clearWanted } from './police.js';
+import { exitVehicle } from './carjack.js';
 import { spawnShooter, shooters, clearShooters } from './combat.js';
 import { say, clearDialogue } from '../ui/dialogue.js';
-import { sky, setHour } from '../world/daylight.js';
-import { game, emit, addCash, bumpSkill } from '../core/state.js';
+import { showPassed, showFailed, dismissResults, resultsOpen } from '../ui/results.js';
+import { setHour } from '../world/daylight.js';
+import { game, on, emit, addCash, bumpSkill } from '../core/state.js';
 import { CAST } from '../data/cast.js';
+import { repLevel } from './progression.js';
 import { rand } from '../core/rng.js';
 
-export const ms = { def: null, stage: -1, timer: 0, enemies: [], target: null, vehicle: null, failT: 0 };
-let scene, startMarker, goalMarker;
+export const ms = { def: null, stage: -1, timer: 0, enemies: [], target: null, vehicle: null, goal: null, run: null, armed: true };
+let scene, startMarker, goalMarker, seekT = 0;
 
 export function setupMissions(sc) {
   scene = sc;
@@ -22,19 +26,36 @@ export function setupMissions(sc) {
   goalMarker = makeMarker('#ff5fa2');
   scene.add(startMarker, goalMarker);
   startMarker.visible = goalMarker.visible = false;
+  // Stars evaded: the peak wanted level of each chase that ends with the cops losing the player.
+  on('wanted', (n) => { if (ms.run) ms.run.peak = Math.max(ms.run.peak, n); });
+  on('lostCops', () => { if (ms.run) { ms.run.evaded += ms.run.peak; ms.run.peak = 0; } });
 }
 
 export const nextMission = () => MISSIONS.find((m) => !game.missionsDone.includes(m.id)) || null;
 const lm = (key) => (typeof key === 'string' ? city.landmarks[key] : key);
 
 export function startMission(def, stage = 0) {
+  dismissResults();
   ms.def = def;
   ms.timer = 0;
+  const s = game.stats;
+  ms.run = { time: 0, cash: game.cash, rep: game.rep || 0, shots: s.shots, hits: s.hits, headshots: s.headshots, peak: police.level, evaded: 0 };
   game.activeMission = def.id;
   if (def.night) setHour(21.5);
   emit('missionStart', def);
-  emit('banner', { top: `CHAPTER ${def.chapter}`, title: def.title, color: '#ffd23f' });
+  emit('banner', { top: `CHAPTER ${def.chapter}  ·  MISSION START`, title: def.title, color: '#ffd23f' });
   enterStage(stage);
+}
+
+// ENTER on the failed card (or a play-test): back to the mission's start marker and go again.
+export function retryMission(def) {
+  if (ms.def || game.mode !== 'play') return;
+  if (player.vehicle) exitVehicle();
+  clearWanted();
+  game.health = Math.max(game.health, 100);
+  const p = lm(def.start);
+  placePlayer(p.x, p.z, 0);
+  startMission(def);
 }
 
 function enterStage(i) {
@@ -43,15 +64,22 @@ function enterStage(i) {
   ms.timer = st.timer || 0;
   ms.target = st.at ? lm(st.at) : null;
   for (const [who, text] of st.say || []) say(who, text);
-  if (st.type === 'wanted') { setWanted(Math.max(police.level, st.level)); }
+  if (st.type === 'wanted') setWanted(Math.max(police.level, st.level));
   if (st.type === 'steal' && st.spawn) {
     const p = lm(st.spawn);
     const v = new Vehicle(st.model, p.x + 6, p.z, Math.PI / 2);
     v.keep = true;
     ms.vehicle = v;
+  } else if (st.type === 'steal' && st.model && !findModel(st.model, 160)) {
+    // "Steal any X": make sure one is parked on a nearby street so the job never stalls.
+    const r = snapToRoad(player.x + 36, player.z + 20);
+    const v = new Vehicle(st.model, r.x + (r.axis === 'z' ? 3.5 : 0), r.z + (r.axis === 'x' ? 3.5 : 0), r.axis === 'z' ? 0 : Math.PI / 2);
+    v.keep = true;
   }
   if (st.type === 'eliminate') spawnSquad(st);
 }
+
+const findModel = (model, range) => nearestVehicle(player.x, player.z, range, (v) => v.model === model && !v.wrecked && v.driver !== 'player');
 
 function spawnSquad(st) {
   const p = lm(st.at);
@@ -71,40 +99,71 @@ function spawnSquad(st) {
 
 function stageDone() {
   const def = ms.def;
-  if (ms.stage + 1 < def.stages.length) { enterStage(ms.stage + 1); emit('objective'); return; }
+  if (ms.stage + 1 < def.stages.length) {
+    emit('stageClear', { def, stage: ms.stage });
+    enterStage(ms.stage + 1);
+    emit('objective');
+    return;
+  }
   passMission();
 }
 
+const medalFor = (time, par) => (time <= par ? 'GOLD' : time <= par * 1.5 ? 'SILVER' : 'BRONZE');
+
 function passMission() {
-  const def = ms.def;
+  const def = ms.def, run = ms.run;
   game.missionsDone.push(def.id);
-  addCash(def.reward);
+  const medal = medalFor(run.time, def.par || 300);
+  const bonus = medal === 'GOLD' ? Math.round(def.reward * 0.1 / 50) * 50 : 0;
+  addCash(def.reward + bonus);
+  const news = [], lvBefore = repLevel().level;
   if (def.unlock) {
     const w = WEAPONS.find((q) => q.id === def.unlock);
-    game.weapons[def.unlock] = true;
-    game.ammo[def.unlock] = (game.ammo[def.unlock] || 0) + w.clip * 5;
-    game.clip[def.unlock] = w.clip;
-    emit('toast', { text: `${w.name} UNLOCKED`, color: '#ffd23f' });
+    if (w) {
+      game.weapons[def.unlock] = true;
+      game.ammo[def.unlock] = (game.ammo[def.unlock] || 0) + w.clip * 5;
+      game.clip[def.unlock] = w.clip;
+      emit('toast', { text: `${w.name} UNLOCKED`, color: '#ffd23f' });
+      news.push(`${w.name} UNLOCKED  ·  SLOT ${WEAPONS.indexOf(w) + 1}`);
+    }
   }
-  if (def.ammo) for (const k in def.ammo) game.ammo[k] += def.ammo[k];
+  if (def.ammo) for (const k in def.ammo) game.ammo[k] = (game.ammo[k] || 0) + def.ammo[k];
   if (def.armor) game.armor = Math.max(game.armor, def.armor);
   bumpSkill('driving', 0.05); bumpSkill('shooting', 0.04);
-  emit('banner', { top: 'MISSION PASSED', title: `+$${def.reward.toLocaleString()}`, color: '#7cff6b' });
-  emit('missionPassed', def);
+  emit('banner', { top: 'MISSION PASSED', title: `+$${(def.reward + bonus).toLocaleString('en-US')}`, color: '#7cff6b' });
+  emit('missionPassed', def);   // progression adds the story rep here
+  const lv = repLevel();
+  if (lv.level > lvBefore) news.push(`REP LEVEL ${lv.level}  ·  ${lv.title}`);
+  if (def.armor) news.push('ARMOR TOPPED UP');
+  const prev = (game.missionBest ||= {})[def.id];
+  const best = !prev || run.time < prev.time;
+  if (best) game.missionBest[def.id] = { time: Math.round(run.time), medal };
+  const s = game.stats;
+  const result = {
+    def, medal, bonus, news, best: best && !!prev, time: run.time, cash: game.cash - run.cash, rep: (game.rep || 0) - run.rep,
+    shots: s.shots - run.shots, hits: Math.min(s.hits - run.hits, s.shots - run.shots), headshots: s.headshots - run.headshots, evaded: run.evaded,
+  };
+  ms.last = result;
   endMission();
+  showPassed(result);
 }
 
 export function failMission(reason) {
   if (!ms.def) return;
-  emit('banner', { top: 'MISSION FAILED', title: reason, color: '#ff4f6b' });
+  const def = ms.def, stage = ms.stage, time = ms.run?.time || 0;
+  // Taken down or cuffed: the FLATLINED / CUFFED screen already says it; the card follows on respawn.
+  if (game.mode === 'play') emit('banner', { top: 'MISSION FAILED', title: reason, color: '#ff4f6b' });
+  emit('missionFailed', { def, reason });
   endMission();
+  ms.last = { def, reason, stage, time, failed: true };
+  if (reason !== 'QUIT') showFailed(ms.last, retryMission);
 }
 
 function endMission() {
   clearShooters((s) => s.tag === 'mission' && !s.alive);
   for (const s of shooters) if (s.tag === 'mission') s.tag = null;
   if (ms.vehicle && ms.vehicle.driver !== 'player') ms.vehicle.keep = false;
-  ms.def = null; ms.stage = -1; ms.enemies = []; ms.vehicle = null; ms.target = null;
+  ms.def = null; ms.stage = -1; ms.enemies = []; ms.vehicle = null; ms.target = null; ms.goal = null; ms.run = null; ms.armed = false;
   game.activeMission = null;
   clearDialogue();
 }
@@ -120,12 +179,15 @@ export function updateMissions(dt, t) {
       const p = lm(nm.start);
       startMarker.visible = true;
       startMarker.position.set(p.x, 0, p.z);
-      // Story jobs wait while a side activity (race, fare, parcel run) is running.
-      if (near(p, 3.5) && (!player.vehicle || player.vehicle.speed < 8) && !game.sideBusy) startMission(nm);
+      // Story jobs wait while a side activity (race, fare, parcel run) or a results card is up, and a
+      // marker only arms once the player has stepped off it (a job can end on the next one's start).
+      if (!near(p, 6)) ms.armed = true;
+      if (ms.armed && near(p, 3.5) && (!player.vehicle || player.vehicle.speed < 8) && !game.sideBusy && !resultsOpen()) startMission(nm);
     } else startMarker.visible = false;
     animateMarker(startMarker, t);
     return;
   }
+  ms.run.time += dt;
   startMarker.visible = false;
   const st = def.stages[ms.stage];
   if (st.timer) {
@@ -140,11 +202,18 @@ export function updateMissions(dt, t) {
     case 'drive': {
       goal = ms.target;
       const ok = player.vehicle && (!st.needModel || player.vehicle.model === st.needModel);
+      // Wrong car (or on foot): the marker points back at the car the job needs.
+      if (!ok && st.needModel && ms.vehicle && !player.vehicle) goal = ms.vehicle;
       if (ok && near(goal, 8)) { player.vehicle.controls.handbrake = true; stageDone(); }
       break;
     }
     case 'steal': {
       if (ms.vehicle && !ms.vehicle.wrecked) goal = ms.vehicle;
+      else if (st.model) {
+        seekT -= dt;
+        if (seekT <= 0 || !ms.seek || ms.seek.wrecked) { ms.seek = findModel(st.model, 400); seekT = 0.5; }
+        goal = ms.seek;
+      }
       const v = player.vehicle;
       if (v && (!st.model || v.model === st.model)) { if (st.model) ms.vehicle = v; stageDone(); }
       break;
@@ -160,7 +229,7 @@ export function updateMissions(dt, t) {
     default: break;
   }
   goalMarker.visible = !!goal && st.type !== 'eliminate';
-  if (goal) goalMarker.position.set(goal.x, goal.isShooter ? 0 : 0, goal.z);
+  if (goal) goalMarker.position.set(goal.x, 0, goal.z);
   ms.goal = goal;
   animateMarker(goalMarker, t);
 }
@@ -203,4 +272,3 @@ export function objectiveInfo() {
 }
 
 export function missionGoal() { return ms.def ? ms.goal : (nextMission() ? lm(nextMission().start) : null); }
-void sky;

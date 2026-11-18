@@ -33,6 +33,7 @@ import { buildFurniture, updateFurniture } from '../world/furniture.js';
 import { buildClouds, updateClouds } from '../world/clouds.js';
 import { setupCarLights, updateCarLights } from '../fx/carlights.js';
 import { setupActivities, updateActivities, updateActivityHud, defaultSide, abortActivity } from '../gameplay/activities.js';
+import { setupResults, updateResults, resultsKey, dismissResults } from '../ui/results.js';
 
 const THREE = window.THREE;
 const params = new URLSearchParams(location.search);
@@ -71,6 +72,7 @@ setupCombat(scene, camera);
 setupMissions(scene);
 setupActivities(scene);
 setupDialogue();
+setupResults();
 setupHud(camera);
 setupMinimap();
 setupAudioEvents();
@@ -110,6 +112,7 @@ function setupShowcase() {
 export function enterTitle() {
   game.mode = 'title';
   showHud(false);
+  dismissResults();
   clearDialogue();
   document.getElementById('dialogue').style.display = 'none';
   if (!SHOT) document.exitPointerLock?.();
@@ -122,7 +125,7 @@ export function enterTitle() {
 function resetRun() {
   Object.assign(game, {
     cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false },
-    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], activeMission: null, side: defaultSide(), sideBusy: false,
+    ammo: { pistol: 60, smg: 0, pump: 0 }, clip: { pistol: 12, smg: 0, pump: 0 }, weapon: 0, rep: 0, missionsDone: [], missionBest: {}, activeMission: null, side: defaultSide(), sideBusy: false,
     stats: { stolen: 0, headshots: 0, kills: 0, shots: 0, hits: 0, distance: 0, maxStars: 0, cuffed: 0, downed: 0, playSeconds: 0, stunts: 0 },
     skills: { driving: 0.2, shooting: 0.15, stamina: 0.3, stealth: 0.1 },
   });
@@ -203,6 +206,7 @@ function onKey(code) {
     return;
   }
   if (game.mode !== 'play') return;
+  if (resultsKey(code)) return;
   if (code === 'Escape') pause('map');
   if (code === 'KeyM') pause('map');
   if (code === 'KeyF') toggleVehicle();
@@ -280,6 +284,7 @@ function step(dt) {
     if (game.mode === 'play') updateMissions(dt, t);
   }
   updateDialogue(dt);
+  updateResults(dt);
   updateEffects(dt);
   if (game.mode === 'play') cuffT = Math.max(0, cuffT - dt * 0.5);
 }

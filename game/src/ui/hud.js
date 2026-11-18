@@ -12,6 +12,7 @@ import { sky } from '../world/daylight.js';
 import { districtAt } from '../world/city.js';
 import { isReloading } from '../gameplay/combat.js';
 import { radioInfo } from '../audio/radio.js';
+import { resultsOpen } from './results.js';
 
 const THREE = window.THREE;
 let root, camera, els = {};
@@ -243,6 +244,9 @@ export function updateHud(dt, now = performance.now() / 1000) {
     p.el.style.opacity = Math.min(1, p.t);
     if (p.t <= 0) { p.el.remove(); popups.splice(i, 1); }
   }
+  // The results card carries its own headline, unlocks and level-ups; centre text waits behind it.
+  const card = resultsOpen();
+  els.banner.style.visibility = els.toastline.style.visibility = card ? 'hidden' : '';
   if (banner) {
     banner.t -= dt;
     els.banner.innerHTML = `<div class="b-top" style="color:${banner.color}">${banner.top}</div><div class="b-title">${banner.title}</div>`;

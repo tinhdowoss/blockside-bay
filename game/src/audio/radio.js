@@ -70,7 +70,7 @@ export function setupAudioEvents() {
   on('wanted', (n) => { if (n > 0) S.stinger(true); });
   on('lostCops', () => S.stinger(false));
   on('missionPassed', () => S.jingle(true));
-  on('banner', (b) => { if (b.top === 'MISSION FAILED') S.jingle(false); });
+  on('missionFailed', () => S.jingle(false));
   on('weapon', () => S.blip(520));
   // Side activities
   on('checkpoint', (e) => S.checkpointSfx(e?.last));
