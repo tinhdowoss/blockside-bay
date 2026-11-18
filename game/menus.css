@@ -142,3 +142,5 @@
 #title .menu .btn { transition: background 0.12s, transform 0.12s; }
 #title .menu .btn.sel { transform: translateX(6px); }
 #pause .tab { transition: background 0.12s, color 0.12s; }
+/* Staged screenshots freeze animations on frame one, so the entrance animations are skipped there. */
+.shot #pause, .shot #pause *, .shot #title .sub { animation: none !important; }

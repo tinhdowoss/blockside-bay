@@ -25,6 +25,18 @@ export function drawPauseMap(cv) {
   g.drawImage(img, a.x, a.y, b.x - a.x, b.y - a.y, 0, 0, cv.width, cv.height);
   const sx = cv.width / (VIEW.x1 - VIEW.x0), sz = cv.height / (VIEW.z1 - VIEW.z0);
   const P = (x, z) => ({ x: (x - VIEW.x0) * sx, y: (z - VIEW.z0) * sz });
+  // GPS route to the current job (the same router as the minimap), under the labels so they stay readable.
+  const cur = ms.def || nextMission();
+  const goal = ms.goal || (cur && city.landmarks[cur.start]);
+  if (goal) {
+    const pts = gpsRoute(player.x, player.z, goal.x, goal.z).map((q) => P(q.x, q.z));
+    g.lineJoin = 'round';
+    for (const [w, c] of [[9, '#12061c'], [5, '#ff4fa3']]) {
+      g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
+      g.lineWidth = w; g.strokeStyle = c; g.setLineDash(c === '#12061c' ? [] : [10, 6]); g.stroke();
+    }
+    g.setLineDash([]);
+  }
   for (const d of DISTRICTS) {
     const [bx, bz] = LABEL_AT[d.id];
     label(g, d.name, P(bx * CELL, bz * CELL), d.color);
@@ -54,18 +66,6 @@ export function drawPauseMap(cv) {
     g.fillStyle = '#12061c'; g.font = 'bold 11px Arial Black, sans-serif'; g.textAlign = 'center'; g.fillText(s.ch, p.x, p.y + 4);
   }
   for (const s of foundShells()) { const p = P(s.x, s.z); g.fillStyle = '#12061c'; g.fillRect(p.x - 4, p.y - 4, 8, 8); g.fillStyle = '#5ffff0'; g.fillRect(p.x - 2.5, p.y - 2.5, 5, 5); }
-  // GPS route to the current job (the same router as the minimap).
-  const cur = ms.def || nextMission();
-  const goal = ms.goal || (cur && city.landmarks[cur.start]);
-  if (goal) {
-    const pts = gpsRoute(player.x, player.z, goal.x, goal.z).map((q) => P(q.x, q.z));
-    g.lineJoin = 'round';
-    for (const [w, c] of [[9, '#12061c'], [5, '#ff4fa3']]) {
-      g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)));
-      g.lineWidth = w; g.strokeStyle = c; g.setLineDash(c === '#12061c' ? [] : [10, 6]); g.stroke();
-    }
-    g.setLineDash([]);
-  }
   // Story pins, numbered 1-9: done (green tick), the current job (big, yellow), the rest (grey).
   const byStart = {};
   MISSIONS.forEach((m, i) => (byStart[m.start] ||= []).push(i));
