@@ -35,9 +35,21 @@ export function updatePlayer(dt) {
   player.camYaw -= input.mouseDX * 0.0025 * sens;
   player.camPitch = Math.max(-0.35, Math.min(0.9, player.camPitch + input.mouseDY * 0.002 * sens * (game.invertY ? -1 : 1)));
   if (player.vehicle) {
-    driveControls(player.vehicle);
-    player.x = player.vehicle.x; player.z = player.vehicle.z;
-    player.model.visible = false;
+    const v = player.vehicle;
+    driveControls(v);
+    player.x = v.x; player.z = v.z;
+    // On the scooter Kai stays visible in the saddle, leaning with it; in cars and boats he is hidden.
+    player.model.visible = !!v.spec.bike;
+    if (v.spec.bike) {
+      const m = player.model, fx = Math.sin(v.heading), fz = Math.cos(v.heading);
+      m.position.set(v.x - fx * 0.3, 0.1, v.z - fz * 0.3);
+      m.rotation.set(0, v.heading, 0);
+      m.rotateZ(v.roll);
+      m.scale.set(1, 1, 1);
+      animateCharacter(m, 0, 0, true);
+      m.userData.parts.legL.rotation.x = m.userData.parts.legR.rotation.x = -1.2;
+      m.userData.parts.gun.visible = false;
+    }
     return;
   }
   player.model.visible = true;

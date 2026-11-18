@@ -33,7 +33,7 @@ export function updateStats(dt) {
 // The STATS page rows: [label, value] grouped by section.
 export function statSections() {
   const s = game.stats, sd = game.side || {};
-  const km = (m) => `${(m / 1000).toFixed(1)} KM`;
+  const km = (m) => (m < 1000 ? `${Math.round(m)} M` : `${(m / 1000).toFixed(1)} KM`);
   const best = Object.values(game.missionBest || {});
   const golds = best.filter((b) => b.medal === 'GOLD').length;
   const medals = Object.values(sd.raceMedal || {});

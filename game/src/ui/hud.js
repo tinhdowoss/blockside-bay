@@ -16,6 +16,7 @@ import { gpsRoute, routeLength } from './gps.js';
 import { isReloading, aimBloom } from '../gameplay/weapons.js';
 import { radioInfo } from '../audio/radio.js';
 import { resultsOpen } from './results.js';
+import { damageStage, fuseLeft } from '../gameplay/vehicle-damage.js';
 
 const THREE = window.THREE;
 let root, camera, els = {};
@@ -81,6 +82,7 @@ export function setupHud(cam) {
       <div class="sp"><span class="num">0</span><span class="unit">MPH</span></div>
       <div class="gearrow"><span class="gearno"></span><div class="gear"></div></div>
       <div class="cond"><b>BODY</b><div class="cbar"><i></i></div><span class="cpct"></span></div>
+      <div class="warn"></div>
       <div class="car"></div>
     </div>
     <div id="crosshair"><i></i><i></i><i></i><i></i></div>
@@ -208,6 +210,12 @@ function updateSpeedo(v, now) {
   cb.style.width = `${hp}%`;
   cb.style.background = hp > 60 ? '#5dff6a' : hp > 30 ? '#ffd23f' : '#ff3f5f';
   els.speedo.querySelector('.cpct').textContent = `${hp}%`;
+  els.speedo.querySelector('.cond b').textContent = v.spec.boat ? 'HULL' : 'BODY';
+  // Damage stage: smoking, then on fire with the seconds left before it blows.
+  const stage = damageStage(v), fuse = fuseLeft(v);
+  const warn = els.speedo.querySelector('.warn');
+  warn.textContent = stage === 3 ? `ON FIRE - BAIL OUT  ${fuse.toFixed(1)}s` : stage === 2 ? 'ENGINE SMOKING' : '';
+  warn.className = `warn ${stage === 3 ? 'fire' : ''}`;
   setHTML(els.speedo.querySelector('.car'), 'car', `${v.spec.name}${v.stolen ? ' <em>STOLEN</em>' : ''}`);
   const r = radioInfo(now);
   els.radio.querySelector('.st').textContent = r.name;

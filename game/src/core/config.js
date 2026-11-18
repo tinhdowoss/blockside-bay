@@ -35,16 +35,24 @@ export const PALETTES = [
   { wall: '#d8ffb8', trim: '#ffffff', accent: '#3fbf4f' },
 ];
 
-// Vehicle models: size in world units, top speed (u/s), accel, grip, colours.
+// Vehicle models: size in world units, top speed (u/s), accel, grip (sideways bite), steer (turn rate
+// multiplier), mass (who wins a shunt), station (the radio preset the car comes tuned to), colours.
+// Body styles: sporty / taxi / police (classic cars), muscle, bike (scooter) and boat.
 export const CAR_MODELS = {
-  coralline: { name: 'CORALLINE GT', len: 4.6, wid: 2.1, hgt: 1.1, top: 46, accel: 22, grip: 7.5, colors: ['#ff4fa3'], sporty: true },
-  cruza: { name: 'CRUZA SEDAN', len: 4.4, wid: 2.0, hgt: 1.4, top: 34, accel: 15, grip: 6.5, colors: ['#3fd0ff', '#ffe066', '#ffffff', '#7cf29a', '#ff8a5c'] },
-  palomar: { name: 'PALOMAR CAB', len: 4.4, wid: 2.0, hgt: 1.45, top: 33, accel: 14, grip: 6.5, colors: ['#ffd23f'], taxi: true },
-  bayrunner: { name: 'BAYRUNNER VAN', len: 5.2, wid: 2.2, hgt: 2.2, top: 28, accel: 11, grip: 6, colors: ['#ffffff', '#a6e3ff', '#ffb3c7'] },
-  vista: { name: 'VISTA COUPE', len: 4.2, wid: 2.0, hgt: 1.2, top: 40, accel: 18, grip: 7, colors: ['#9b6bff', '#ff6b6b', '#29e0c0', '#ffffff'], sporty: true },
-  interceptor: { name: 'BBPD INTERCEPTOR', len: 4.7, wid: 2.1, hgt: 1.35, top: 44, accel: 21, grip: 7.5, colors: ['#ffffff'], police: true },
+  coralline: { name: 'CORALLINE GT', len: 4.6, wid: 2.1, hgt: 1.1, top: 46, accel: 22, grip: 7.5, steer: 1.1, mass: 1, station: 0, colors: ['#ff4fa3'], sporty: true },
+  cruza: { name: 'CRUZA SEDAN', len: 4.4, wid: 2.0, hgt: 1.4, top: 34, accel: 15, grip: 6.5, steer: 1, mass: 1.1, station: 1, colors: ['#3fd0ff', '#ffe066', '#ffffff', '#7cf29a', '#ff8a5c'] },
+  palomar: { name: 'PALOMAR CAB', len: 4.4, wid: 2.0, hgt: 1.45, top: 33, accel: 14, grip: 6.5, steer: 0.95, mass: 1.1, station: 3, colors: ['#ffd23f'], taxi: true },
+  bayrunner: { name: 'BAYRUNNER VAN', len: 5.2, wid: 2.2, hgt: 2.2, top: 28, accel: 11, grip: 6, steer: 0.75, mass: 1.7, station: 2, colors: ['#ffffff', '#a6e3ff', '#ffb3c7'] },
+  vista: { name: 'VISTA COUPE', len: 4.2, wid: 2.0, hgt: 1.2, top: 40, accel: 18, grip: 7, steer: 1.15, mass: 0.95, station: 0, colors: ['#9b6bff', '#ff6b6b', '#29e0c0', '#ffffff'], sporty: true },
+  interceptor: { name: 'BBPD INTERCEPTOR', len: 4.7, wid: 2.1, hgt: 1.35, top: 44, accel: 21, grip: 7.5, steer: 1.05, mass: 1.3, station: 1, colors: ['#ffffff'], police: true },
+  // Big torque, loose rear: lights up its tyres off the line and swings wide.
+  bruiser: { name: 'BRUISER V8', len: 4.8, wid: 2.15, hgt: 1.3, top: 47, accel: 26, grip: 5.2, steer: 0.9, mass: 1.45, station: 2, colors: ['#ff7a1a', '#1a1a1a', '#2ee6c8', '#ffd23f'], muscle: true },
+  // Nimble and quick to turn, but slow and it loses every shunt.
+  zippa: { name: 'ZIPPA SCOOTER', len: 1.9, wid: 0.8, hgt: 1.3, top: 29, accel: 21, grip: 9.5, steer: 1.55, mass: 0.35, station: 3, colors: ['#ff5fa2', '#3fd0ff', '#fff06b', '#7cf29a'], bike: true },
+  // Water only: drifts wide, bobs on the swell, throws spray. Found at the marina and off Seaglass Beach.
+  skiff: { name: 'BAY SKIFF', len: 5.2, wid: 2.0, hgt: 1.2, top: 36, accel: 13, grip: 1.6, steer: 0.7, mass: 1.2, station: 0, colors: ['#ff4fa3', '#2ee6c8', '#ffd23f'], boat: true },
 };
-export const TRAFFIC_MODELS = ['cruza', 'cruza', 'palomar', 'bayrunner', 'vista', 'cruza', 'vista'];
+export const TRAFFIC_MODELS = ['cruza', 'cruza', 'palomar', 'bayrunner', 'vista', 'cruza', 'vista', 'bruiser', 'zippa', 'cruza', 'zippa'];
 
 // Player weapons, one per number key. kick = camera recoil (radians), bloom = spread added per shot
 // (decays back), reloadT = reload seconds, pierce = how many bodies one shot passes through.

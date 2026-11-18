@@ -11,7 +11,7 @@ export const glowMat = registerGlow(new THREE.MeshBasicMaterial({ vertexColors: 
 export const redLightMat = new THREE.MeshBasicMaterial({ color: 0xff1030 });
 export const blueLightMat = new THREE.MeshBasicMaterial({ color: 0x1060ff });
 
-function part(boxes, glow = []) {
+export function part(boxes, glow = []) {
   const b = new Batcher().material('b', bodyMat).material('g', glowMat);
   for (const p of boxes) b.box('b', p[0], p[1], p[2], p[3], p[4], p[5], { color: p[6] });
   for (const p of glow) b.box('g', p[0], p[1], p[2], p[3], p[4], p[5], { color: p[6] });
@@ -75,7 +75,8 @@ export function animateCharacter(model, phase, amount, aim = false, punch = 0) {
   p.torso.position.y = 0.9 + Math.abs(Math.sin(phase)) * 0.05 * amount;
 }
 
-// A car facing +z. Returns a Group with userData {lights: [red, blue meshes], wheels}.
+// A classic car body facing +z (other body styles: vehicle-models.js). Returns a Group with
+// userData {lights: [red, blue meshes], model}.
 export function makeCar(key, color) {
   const m = CAR_MODELS[key];
   const L = m.len, W = m.wid, H = m.hgt;

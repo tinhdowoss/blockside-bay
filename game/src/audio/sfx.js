@@ -183,8 +183,10 @@ export function updateVoices(dt, car, siren, playing) {
     const thr = Math.max(0, car.controls.throttle || 0);
     let rpm = car.speed < 0.5 ? 0.16 + thr * 0.25 : 0.25 + within * 0.75;
     if (eng.dip > 0) rpm *= 0.82;
-    const base = car.spec.sporty ? 46 : car.spec.police ? 44 : 38;
-    const f0 = base + rpm * (car.spec.sporty ? 125 : 105) + Math.sin(t * 31) * 0.6;
+    // Engine voice per body: deep V8 rumble, buzzy scooter, droning outboard, revvy coupes.
+    const sp = car.spec;
+    const base = sp.muscle ? 30 : sp.bike ? 72 : sp.boat ? 34 : sp.sporty ? 46 : sp.police ? 44 : 38;
+    const f0 = base + rpm * (sp.bike ? 190 : sp.muscle ? 95 : sp.boat ? 80 : sp.sporty ? 125 : 105) + Math.sin(t * (sp.muscle ? 17 : 31)) * (sp.muscle ? 2.2 : 0.6);
     eng.o1.frequency.setTargetAtTime(f0, t, 0.03);
     eng.o2.frequency.setTargetAtTime(f0 * 0.5, t, 0.03);
     eng.o3.frequency.setTargetAtTime(f0 * 2, t, 0.03);
@@ -196,7 +198,7 @@ export function updateVoices(dt, car, siren, playing) {
     eng.rg.gain.setTargetAtTime(0.05 + thr * 0.12 * rpm, t, 0.08);
     // Off-throttle burble at high revs
     if (thr < 0.05 && rpm > 0.55 && Math.random() < dt * 9) noise(t, 0.03, 0.12, 300 + Math.random() * 300, { ftype: 'bandpass', q: 2 });
-    scr.g.gain.setTargetAtTime((car.skid || 0) * 0.2, t, 0.04);
+    scr.g.gain.setTargetAtTime(sp.boat ? 0 : (car.skid || 0) * 0.2, t, 0.04);
     scr.f.frequency.setTargetAtTime(1700 + (car.skid || 0) * 900 + k * 400, t, 0.1);
     wind.g.gain.setTargetAtTime(Math.pow(k, 2) * 0.25, t, 0.2);
     wind.f.frequency.setTargetAtTime(500 + k * 900, t, 0.2);

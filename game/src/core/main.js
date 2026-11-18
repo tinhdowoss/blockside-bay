@@ -12,7 +12,8 @@ import { populateTraffic, updateTraffic } from '../world/traffic.js';
 import { setupPedestrians, populatePeds, updatePeds, peds } from '../world/pedestrians.js';
 import { toggleVehicle, exitVehicle } from '../gameplay/carjack.js';
 import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from '../gameplay/police.js';
-import { setupCombat, updateCombat, shooters, clearShooters } from '../gameplay/combat.js';
+import { setupCombat, updateCombat, shooters, clearShooters, hurtPlayer } from '../gameplay/combat.js';
+import { BOAT_SPOTS } from '../gameplay/boats.js';
 import { setupWeapons, updateWeapons } from '../gameplay/weapons.js';
 import { updateEnemies } from '../gameplay/enemies.js';
 import { setupPickups, updatePickups } from '../gameplay/pickups.js';
@@ -226,6 +227,14 @@ function talkToNearest() {
 
 // ---- Down / cuffed --------------------------------------------------------------------
 let downT = 0, cuffT = 0;
+// A wreck going up throws the driver out and hurts anyone within 7 m.
+on('explosion', (v) => {
+  if (!v || game.mode !== 'play') return;
+  if (player.vehicle === v) { exitVehicle(); hurtPlayer(70, v.x, v.z); return; }
+  const d = Math.hypot(player.x - v.x, player.z - v.z);
+  if (d < 7) hurtPlayer(55 * (1 - d / 7), v.x, v.z);
+});
+
 on('playerDown', () => {
   if (game.mode !== 'play') return;
   game.mode = 'down';
@@ -332,6 +341,7 @@ function frame() {
 
 // ---- Boot -------------------------------------------------------------------------------
 populateTraffic(SHOWCASE.x, SHOWCASE.z, 18);
+for (const b of BOAT_SPOTS) new Vehicle('skiff', b.x, b.z, b.heading, b.color).keep = true;
 populatePeds(SHOWCASE.x, SHOWCASE.z, 20);
 setHour(SHOT ? 12 : 17.6);
 if (SHOT) {

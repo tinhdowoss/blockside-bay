@@ -6,7 +6,7 @@
 //     then ammo), body armour
 import { SHOP, TUNE, RESPRAY_COLORS, SITES } from '../data/activities-data.js';
 import { WEAPONS } from '../core/config.js';
-import { makeCar } from '../world/models.js';
+import { buildVehicleMesh as makeCar } from '../world/vehicle-models.js';
 import { player } from './player.js';
 import { police } from './police.js';
 import { repLevel } from './progression.js';

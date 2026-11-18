@@ -97,7 +97,7 @@ await key('KeyE', 2);                            // MISSIONS, STATS
 await wait(300);
 const stats = await text('#pause .body');
 ok('STATS shows distance driven, cars stolen, headshots, races won', ['DISTANCE DRIVEN', 'CARS STOLEN', 'HEADSHOTS', 'RACES WON', 'TOP SPEED', 'STARS EVADED'].every((k) => stats.includes(k)));
-ok('STATS numbers are real (cars stolen 1+, distance > 0)', /CARS STOLEN [1-9]/.test(stats) && !/DISTANCE DRIVEN 0\.0 KM/.test(stats), stats.slice(0, 120));
+ok('STATS numbers are real (cars stolen 1+, distance > 0)', /CARS STOLEN [1-9]/.test(stats) && /DISTANCE DRIVEN ([1-9]\d* M|\d+\.\d KM)/.test(stats), stats.slice(0, 120));
 await snap('04-pause-stats');
 await key('KeyE', 2);                            // SAVE, SETTINGS
 await wait(300);

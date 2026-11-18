@@ -34,7 +34,11 @@ export function setVolume(music, sfx, master = game.masterVol ?? 1) {
 }
 
 export function setStation(i) { setStationMusic(i); game.radioStation = radio.station; }
-export function nextStation() { setStation(radio.station + 1); S.blip(880); }
+export function nextStation() {
+  setStation(radio.station + 1);
+  if (player.vehicle) player.vehicle.radioStation = radio.station;
+  S.blip(880);
+}
 export function setRadioPlaying(on_) { radio.on = on_; }
 
 let lastT = 0;
@@ -69,7 +73,11 @@ export function setupAudioEvents() {
   on('pickup', () => S.coin());
   on('hurt', S.hurtSfx);
   // The car radio plays while you are in a vehicle (the title screen turns it on by itself).
-  on('enterVehicle', () => { S.door(true); radio.on = true; });
+  // Every vehicle comes tuned to its own preset (spec.station) and keeps whatever you switch it to.
+  on('enterVehicle', (v) => {
+    S.door(true); radio.on = true;
+    if (v && game.mode === 'play') { v.radioStation ??= v.spec.station ?? 0; setStationMusic(v.radioStation); game.radioStation = radio.station; }
+  });
   on('exitVehicle', () => { S.door(false); if (game.mode === 'play') radio.on = false; });
   on('cash', (n) => { if (n > 0) S.coin(); });
   on('wanted', (n) => { if (n > 0) S.stinger(true); });

@@ -61,6 +61,17 @@ export function blood(x, y, z, n = 8) {
   for (let i = 0; i < n; i++) spawn(x, y, z, (rand() - 0.5) * 4, rand() * 4, (rand() - 0.5) * 4, 0.6, 0.18, '#c0102a', { grav: 14 });
 }
 
+// Licking flames for a burning car: hot orange/yellow motes that rise and shrink, with dark smoke above.
+export function fire(x, y, z, k = 1) {
+  for (let i = 0; i < 2; i++) spawn(x + (rand() - 0.5) * 0.9 * k, y, z + (rand() - 0.5) * 0.9 * k, (rand() - 0.5) * 0.8, 2.2 + rand() * 1.6, (rand() - 0.5) * 0.8, 0.35 + rand() * 0.25, 0.32 * k, i ? '#ff7a1a' : '#ffd040', { grow: -0.4, hot: 2.8 });
+  if (rand() < 0.4) smoke(x, y + 1.2, z, '#262626', 1, { size: 1.1, grow: 3, life: 2.4, alpha: 0.7, vy: 2.5 });
+}
+
+// White spray thrown off a boat's bow and wake.
+export function spray(x, z, vx = 0, vz = 0) {
+  for (let i = 0; i < 2; i++) spawn(x, 0.4, z, vx * 0.2 + (rand() - 0.5) * 3, 1.5 + rand() * 2.5, vz * 0.2 + (rand() - 0.5) * 3, 0.5 + rand() * 0.3, 0.2, '#f4fbff', { grav: 9, hot: 1.3 });
+}
+
 export function explosion(x, y, z) {
   for (let i = 0; i < 40; i++) spawn(x, y + 1, z, (rand() - 0.5) * 16, rand() * 12, (rand() - 0.5) * 16, 0.8 + rand() * 0.5, 0.6, i % 2 ? '#ff8a1a' : '#ffd040', { grav: 6, grow: 1, hot: 2.5 });
   for (let i = 0; i < 20; i++) smoke(x, y + 2, z, '#3a3a3a', 1, { size: 2.5, grow: 6, life: 3.5, alpha: 0.8, vy: 2 + rand() * 2 });
