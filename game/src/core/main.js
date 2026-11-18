@@ -1,4 +1,5 @@
-// BLOCKSIDE BAY — boot, main loop and game states (title, play, pause, down).
+// BLOCKSIDE BAY — boot (renderer, world, systems), game states (title, play, pause) and the main loop
+// that steps every system in order. Gameplay rules live in gameplay/*; this file only wires them up.
 import { CITY_SIZE } from './config.js';
 import { setSeed } from './rng.js';
 import { buildCity, updateCity, city } from '../world/city.js';
@@ -12,7 +13,8 @@ import { populateTraffic, updateTraffic } from '../world/traffic.js';
 import { setupPedestrians, populatePeds, updatePeds, peds } from '../world/pedestrians.js';
 import { toggleVehicle, exitVehicle } from '../gameplay/carjack.js';
 import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from '../gameplay/police.js';
-import { setupCombat, updateCombat, shooters, clearShooters, hurtPlayer } from '../gameplay/combat.js';
+import { setupCombat, updateCombat, shooters } from '../gameplay/combat.js';
+import { setupConsequences, updateConsequences } from '../gameplay/consequences.js';
 import { BOAT_SPOTS } from '../gameplay/boats.js';
 import { setupWeapons, updateWeapons } from '../gameplay/weapons.js';
 import { updateEnemies } from '../gameplay/enemies.js';
@@ -20,7 +22,7 @@ import { setupPickups, updatePickups } from '../gameplay/pickups.js';
 import { buildCover } from '../world/cover.js';
 import { setupMissions, updateMissions, failMission, ms } from '../gameplay/missions.js';
 import { setupDialogue, updateDialogue, say, clearDialogue } from '../ui/dialogue.js';
-import { setupHud, updateHud, showHud, showDown } from '../ui/hud.js';
+import { setupHud, updateHud, showHud } from '../ui/hud.js';
 import { setupMinimap, drawMinimap } from '../ui/minimap.js';
 import { initAudio, updateAudio, setRadioPlaying, nextStation, setupAudioEvents } from '../audio/radio.js';
 import { setupStats, updateStats, freshStats } from '../gameplay/stats.js';
@@ -88,6 +90,7 @@ setupHud(camera);
 setupMinimap();
 setupAudioEvents();
 setupProgression();
+setupConsequences();
 setupStats();
 setupInput(canvas, onKey);
 setupMenus({ newGame, continueGame, resume, save: (s) => { saveGame(s); emit('toast', { text: `SAVED TO SLOT ${s + 1}`, color: '#5dff6a' }); }, quit: quitToTitle });
@@ -225,48 +228,6 @@ function talkToNearest() {
   if (best) emit('popup', { text: QUIPS[Math.floor(Math.random() * QUIPS.length)], x: best.x, y: 2.4, z: best.z, color: '#ffffff' });
 }
 
-// ---- Down / cuffed --------------------------------------------------------------------
-let downT = 0, cuffT = 0;
-// A wreck going up throws the driver out and hurts anyone within 7 m.
-on('explosion', (v) => {
-  if (!v || game.mode !== 'play') return;
-  if (player.vehicle === v) { exitVehicle(); hurtPlayer(70, v.x, v.z); return; }
-  const d = Math.hypot(player.x - v.x, player.z - v.z);
-  if (d < 7) hurtPlayer(55 * (1 - d / 7), v.x, v.z);
-});
-
-on('playerDown', () => {
-  if (game.mode !== 'play') return;
-  game.mode = 'down';
-  downT = 4;
-  game.stats.downed++;
-  game.cash = Math.max(0, game.cash - 500);
-  if (ms.def) failMission('YOU WERE TAKEN DOWN');
-  showDown('FLATLINED', 'Patched up at St. Coral Clinic  ·  -$500');
-});
-on('cuffing', (dt) => {
-  cuffT += dt;
-  if (cuffT > 2.2 && game.mode === 'play') {
-    game.mode = 'down';
-    downT = 4; cuffT = 0;
-    game.stats.cuffed++;
-    game.cash = Math.max(0, game.cash - 800);
-    if (ms.def) failMission('CUFFED BY THE BBPD');
-    showDown('CUFFED', 'Released from BBPD holding  ·  -$800');
-  }
-});
-
-function respawn() {
-  showDown(null);
-  if (player.vehicle) exitVehicle();
-  clearWanted();
-  clearShooters((s) => !s.alive || s.faction === 'police');
-  game.health = 100;
-  const c = city.landmarks.clinic;
-  placePlayer(c.x, c.z, 0);
-  game.mode = 'play';
-}
-
 // ---- Loop -------------------------------------------------------------------------------
 let last = SHOT ? 12.5 : performance.now() / 1000, t = 0, frozen = false;
 export const loop = { step, render, freeze: (f) => { frozen = f; } };
@@ -288,7 +249,7 @@ function step(dt) {
     updatePickups(dt, t);
     if (player.vehicle) player.vehicle.controls.handbrake ||= false;
   }
-  if (game.mode === 'down') { downT -= dt; if (downT <= 0) respawn(); }
+  updateConsequences(dt);
   if (playing || game.mode === 'title') {
     const actors = [...vehicles, ...peds.filter((p) => p.state !== 'dead'), { x: player.x, z: player.z, isPlayer: true }];
     updateTraffic(dt, player.x, player.z, actors);
@@ -300,7 +261,6 @@ function step(dt) {
   updateDialogue(dt);
   updateResults(dt);
   updateEffects(dt);
-  if (game.mode === 'play') cuffT = Math.max(0, cuffT - dt * 0.5);
 }
 
 let hurt = 0, lastHealth = 100;
