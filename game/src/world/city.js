@@ -1,4 +1,5 @@
-// Grid city: districts, roads, sidewalks, art-deco buildings, palms, beach, ocean, pier and neon.
+// Grid city: districts, roads, sidewalks, art-deco buildings, palms, beach, ocean, pier and neon (merged by the
+// voxel Batcher, seed 1337), plus the road graph helpers, the collider grid and the story landmarks.
 import { CELL, ROAD_W, GRID_N, CITY_SIZE, OCEAN_X, DISTRICTS, PALETTES, BEACH_NAME } from '../core/config.js';
 import { makeRng } from '../core/rng.js';
 import { Batcher } from './voxel.js';
@@ -58,7 +59,7 @@ export function onRoad(x, z) {
   const inside = x > -HALF_ROAD && x < CITY_SIZE + HALF_ROAD && z > -HALF_ROAD && z < CITY_SIZE + HALF_ROAD;
   return inside && (rx || rz);
 }
-// Closest point on any road centre line.
+/** Closest point on any road centre line, with the axis that road runs along. */
 export function snapToRoad(x, z) {
   const cx = Math.max(0, Math.min(CITY_SIZE, Math.round(x / CELL) * CELL));
   const cz = Math.max(0, Math.min(CITY_SIZE, Math.round(z / CELL) * CELL));
@@ -67,8 +68,8 @@ export function snapToRoad(x, z) {
 }
 
 // ---- Colliders ---------------------------------------------------------------------------
-const HC = 16;
-// Registers a solid box for movement, sight and bullets (also used by world/cover.js for crates).
+const HC = 16;   // spatial hash cell size (world units)
+/** Registers a solid box for movement, sight and bullets (also used by world/cover.js for crates). */
 export function addCollider(minX, maxX, minZ, maxZ, h, low = false) {
   const c = { minX, maxX, minZ, maxZ, h, low };
   const id = city.colliders.push(c) - 1;
@@ -90,7 +91,7 @@ function nearby(x, z, r) {
   }
   return set;
 }
-// Pushes a circle out of every collider; returns {x, z, hit, nx, nz}.
+/** Pushes a circle out of every collider; returns {x, z, hit, nx, nz}. */
 export function collideCircle(x, z, r) {
   let hit = false, nx = 0, nz = 0;
   for (const id of nearby(x, z, r + 1)) {
@@ -118,7 +119,7 @@ export function collideCircle(x, z, r) {
   const nl = Math.hypot(nx, nz) || 1;
   return { x, z, hit, nx: nx / nl, nz: nz / nl };
 }
-// True if a straight 2D line between two points crosses a tall building.
+/** True if a straight 2D line between two points crosses a tall building. */
 export function sightBlocked(x1, z1, x2, z2) {
   const steps = Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 3);
   for (let s = 1; s < steps; s++) {
@@ -130,7 +131,7 @@ export function sightBlocked(x1, z1, x2, z2) {
   }
   return false;
 }
-// 3D ray against buildings: returns distance to the first wall or Infinity.
+/** 3D ray against buildings: returns distance to the first wall or Infinity. */
 export function rayBuildings(ox, oy, oz, dx, dy, dz, maxD) {
   let best = maxD;
   const step = 2;
@@ -165,8 +166,7 @@ export const mats = {};
 function lambert(opts) { return new THREE.MeshLambertMaterial(opts); }
 
 function setupMaterials() {
-  const tile = (t) => t;
-  mats.road = lambert({ map: tile(TX.roadTexture()) });
+  mats.road = lambert({ map: TX.roadTexture() });
   mats.cross = lambert({ map: TX.intersectionTexture() });
   mats.walk = lambert({ map: TX.sidewalkTexture() });
   mats.plaza = lambert({ map: TX.plazaTexture() });
@@ -199,6 +199,7 @@ function wallMat(pi, kind) {
   return key;
 }
 
+// One building (4 units per floor) with its trim, neon and roof details; returns its total height.
 function building(cx, cz, w, d, floors, pi, kind, rnd) {
   const pal = PALETTES[pi];
   const h = floors * 4;
@@ -329,6 +330,7 @@ const NEON_NAMES = [
   ['PAWN', '#3fe8ff'], ['HOTEL LUNA', '#ffd23f'], ['KARAOKE', '#ff5fa2'], ['CAFE ROSA', '#ff7a9a'],
 ];
 
+// Fills block (bx, bz): sidewalk, palms, lamps, then the district's building style (or a park / plaza / car park).
 function buildBlock(bx, bz, rnd) {
   const x0 = bx * CELL + HALF_ROAD, z0 = bz * CELL + HALF_ROAD;
   const size = CELL - ROAD_W;            // 36
@@ -375,6 +377,7 @@ function buildBlock(bx, bz, rnd) {
 
   const addLot = (x, z, w, d, color, kind) => city.lots.push({ x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2, color, kind });
   let neonUsed = 0;
+  // At most two neon signs per block; outside the nightlife districts only about a third get one.
   const neonAt = (x, z, w, d, y) => {
     if (dist.id !== 'neon' && dist.id !== 'caracol' && dist.id !== 'pier' && rnd() > 0.35) return;
     if (neonUsed > 1) return;
@@ -405,10 +408,9 @@ function buildBlock(bx, bz, rnd) {
       B.box(wallMat(p, 'tower'), cx, 4, cz, L, 8, L, { uv: 8, top: 'roof' });
       addCollider(lot.x0, lot.x1, lot.z0, lot.z1, 8);
       const tw = 18 + rnd() * 4;
-      const h = building(cx, cz, tw, tw, 8 + Math.floor(rnd() * 9), (p + 3) % PALETTES.length, 'tower', rnd);
+      building(cx, cz, tw, tw, 8 + Math.floor(rnd() * 9), (p + 3) % PALETTES.length, 'tower', rnd);
       addLot(cx, cz, L, L, PALETTES[p].wall, 'tower');
       if (rnd() < 0.4) neonAt(cx, cz, L, L, 6);
-      void h;
       break;
     }
     case 'docks': {
@@ -508,7 +510,8 @@ function buildGroundAndCoast(rnd) {
   B.box('vc', OCEAN_X + 5.5, 0.01, (landZ0 + landZ1) / 2, 5, 0.04, landZ1 - landZ0, { color: '#d9b77a' });
 }
 
-function buildPier(rnd) {
+// Coral Pier: plank deck on pilings with rails, the arch sign, and Salt's yacht moored at the end.
+function buildPier() {
   const x0 = OCEAN_X - 6, len = PIER_LEN;
   B.box('wood', x0 + len / 2, 0.15, PIER_Z, len, 0.3, 11, { uv: 4 });
   for (let x = x0; x < x0 + len; x += 6) {
@@ -537,9 +540,7 @@ function buildPier(rnd) {
   B.box('vc', x0 + 2, 3, PIER_Z + 5.6, 0.6, 6, 0.6, { color: '#ff5fa2' });
   B.box('vc', x0 + 2, 6.2, PIER_Z, 0.6, 0.8, 11.8, { color: '#ff5fa2' });
   neonSign('CORAL PIER', '#ffd23f', x0 + 1.6, 7.4, PIER_Z, -Math.PI / 2, 1.8);
-  void rnd;
 }
-
 
 function buildNightPools() {
   const mat = new THREE.MeshBasicMaterial({ map: TX.glowTexture('#ffcf80'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.55 });
@@ -580,7 +581,7 @@ export function buildCity(scene) {
   buildGroundAndCoast(rnd);
   buildRoads();
   for (let bx = 0; bx < GRID_N; bx++) for (let bz = 0; bz < GRID_N; bz++) buildBlock(bx, bz, rnd);
-  buildPier(rnd);
+  buildPier();
   city.group.add(B.build(true));
   city.water = buildWater(city.group);
   buildNightPools();
@@ -588,6 +589,7 @@ export function buildCity(scene) {
   return city;
 }
 
+/** Per-frame: animates the water and flickers the neon halos (brighter at night). */
 export function updateCity(t, night, focus = { x: CITY_SIZE / 2, z: CITY_SIZE / 2 }) {
   updateWater(t, focus);
   for (const n of city.neon) {

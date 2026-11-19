@@ -1,4 +1,6 @@
-// Tiny pixel-art canvas textures (16x16 and friends) rendered with NearestFilter.
+// Tiny pixel-art canvas textures (16x16 and friends) rendered with NearestFilter: facades and their
+// night glow maps, roofs, roads, sidewalks, nature, water, neon signs and soft glows. Every texture
+// is drawn once from a fixed seed and cached by key.
 import { makeRng } from '../core/rng.js';
 import { drawPixelText, textWidth } from '../ui/pixelfont.js';
 import { shade } from '../data/cast.js';
@@ -12,6 +14,7 @@ function canvas(w, h) {
   return c;
 }
 
+// Crisp-pixel sRGB texture, tiling unless repeat is false.
 function toTexture(cv, repeat = true) {
   const t = new THREE.CanvasTexture(cv);
   t.magFilter = THREE.NearestFilter;
@@ -27,6 +30,7 @@ function cached(key, make) {
   return cache.get(key);
 }
 
+// Fills the canvas with base, then shades each step x step cell by up to +-amt/2.
 function noise(ctx, w, h, base, amt, rnd, step = 1) {
   ctx.fillStyle = base; ctx.fillRect(0, 0, w, h);
   for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
@@ -36,7 +40,7 @@ function noise(ctx, w, h, base, amt, rnd, step = 1) {
   }
 }
 
-// Facade: 32x32 px covering two floors x two bays (8x8 world units). kind: deco | tower | house | warehouse
+/** Facade: 32x32 px covering two floors x two bays (8x8 world units). kind: deco | tower | house | warehouse */
 export function facadeTexture(pal, kind, seed) {
   return cached(`f${pal.wall}${kind}${seed}`, () => {
     const cv = canvas(32, 32), g = cv.getContext('2d'), rnd = makeRng(seed * 31 + 7);
@@ -75,7 +79,7 @@ export function facadeTexture(pal, kind, seed) {
   });
 }
 
-// Night glow map: same layout as facade, windows randomly lit warm or neon.
+/** Night glow map: same layout as facade, windows randomly lit warm or neon. */
 export function facadeGlowTexture(kind, seed) {
   return cached(`g${kind}${seed}`, () => {
     const cv = canvas(32, 32), g = cv.getContext('2d'), rnd = makeRng(seed * 13 + 3);
@@ -89,6 +93,7 @@ export function facadeGlowTexture(kind, seed) {
         if (fl === 0 && rnd() < 0.5) { g.fillStyle = '#ffd27a'; g.fillRect(4, 4, 10, 6); }
       } else {
         for (let b = 0; b < 2; b++) if (rnd() < 0.6) { g.fillStyle = lit[Math.floor(rnd() * 4)]; g.fillRect(b * 16 + 4, y0 + 4, 8, 7); }
+        // Pink neon strip along the top-floor trim of deco buildings.
         g.fillStyle = '#ff5fd0'; if (kind === 'deco' && fl === 1) g.fillRect(0, y0 + 15, 32, 1);
       }
     }
@@ -96,6 +101,7 @@ export function facadeGlowTexture(kind, seed) {
   });
 }
 
+/** Pale gravel roof with a darker seam on two edges. */
 export function roofTexture() {
   return cached('roof', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -105,7 +111,7 @@ export function roofTexture() {
   });
 }
 
-// Road: one tile spans the 12-unit width; dashed yellow centre, white edges.
+/** Road: one tile spans the 12-unit width; dashed yellow centre, white edges. */
 export function roadTexture() {
   return cached('road', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -116,6 +122,7 @@ export function roadTexture() {
   });
 }
 
+/** Junction asphalt with zebra crossings on all four sides. */
 export function intersectionTexture() {
   return cached('cross', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -126,6 +133,7 @@ export function intersectionTexture() {
   });
 }
 
+/** Pink-beige paving slabs (four per tile). */
 export function sidewalkTexture() {
   return cached('walk', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -135,6 +143,7 @@ export function sidewalkTexture() {
   });
 }
 
+/** Pink and white checkerboard plaza tiles. */
 export function plazaTexture() {
   return cached('plaza', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -162,6 +171,7 @@ export function sandTexture() {
   });
 }
 
+/** Turquoise water with a few light ripple dashes. */
 export function waterTexture() {
   return cached('water', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d'), r = makeRng(13);
@@ -172,6 +182,7 @@ export function waterTexture() {
   });
 }
 
+/** Boardwalk planks. */
 export function woodTexture() {
   return cached('wood', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -181,6 +192,7 @@ export function woodTexture() {
   });
 }
 
+/** Ringed palm-trunk bark. */
 export function barkTexture() {
   return cached('bark', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -190,6 +202,7 @@ export function barkTexture() {
   });
 }
 
+/** Palm frond with a darker midrib. */
 export function leafTexture() {
   return cached('leaf', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');
@@ -199,7 +212,7 @@ export function leafTexture() {
   });
 }
 
-// Neon sign: pixel-font text in a bright colour on a dark backing; used as map + emissive.
+/** Neon sign: pixel-font text in a bright colour on a dark backing; used as map + emissive. userData.aspect = w / h. */
 export function neonSignTexture(text, color) {
   return cached(`n${text}${color}`, () => {
     const w = textWidth(text) + 6, h = 13;
@@ -207,6 +220,7 @@ export function neonSignTexture(text, color) {
     g.fillStyle = '#1a0d26'; g.fillRect(0, 0, w, h);
     g.fillStyle = color; g.fillRect(0, 0, w, 1); g.fillRect(0, h - 1, w, 1); g.fillRect(0, 0, 1, h); g.fillRect(w - 1, 0, 1, h);
     drawPixelText(g, text, 3, 3, 1, '#ffffff');
+    // Tint the white letters and border with the sign colour.
     g.globalCompositeOperation = 'source-atop';
     g.globalAlpha = 0.35; g.fillStyle = color; g.fillRect(0, 0, w, h);
     const t = toTexture(cv, false);
@@ -215,7 +229,7 @@ export function neonSignTexture(text, color) {
   });
 }
 
-// Soft round glow used for headlights, neon halos and the spotlight pool.
+/** Soft round glow used for headlights, neon halos and the spotlight pool (color must be #rrggbb). */
 export function glowTexture(color = '#ffffff') {
   return cached(`glow${color}`, () => {
     const cv = canvas(64, 64), g = cv.getContext('2d');
@@ -228,6 +242,7 @@ export function glowTexture(color = '#ffffff') {
   });
 }
 
+/** Near-white, barely mottled cloud texture. */
 export function cloudTexture() {
   return cached('cloud', () => {
     const cv = canvas(16, 16), g = cv.getContext('2d');

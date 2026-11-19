@@ -1,4 +1,5 @@
-// Voxel models: blocky people, cars and the police helicopter, built from vertex-coloured boxes.
+// Voxel models: blocky people, classic cars, the police helicopter and mission markers, built from
+// vertex-coloured boxes (muscle cars, scooters and boats live in vehicle-models.js).
 import { Batcher } from './voxel.js';
 import { CAR_MODELS } from '../core/config.js';
 import { shade } from '../data/cast.js';
@@ -11,6 +12,7 @@ export const glowMat = registerGlow(new THREE.MeshBasicMaterial({ vertexColors: 
 export const redLightMat = new THREE.MeshBasicMaterial({ color: 0xff1030 });
 export const blueLightMat = new THREE.MeshBasicMaterial({ color: 0x1060ff });
 
+/** A shadow-casting group from [x,y,z,sx,sy,sz,color] boxes: `boxes` are lit, `glow` boxes are self-lit. */
 export function part(boxes, glow = []) {
   const b = new Batcher().material('b', bodyMat).material('g', glowMat);
   for (const p of boxes) b.box('b', p[0], p[1], p[2], p[3], p[4], p[5], { color: p[6] });
@@ -20,7 +22,8 @@ export function part(boxes, glow = []) {
   return g;
 }
 
-// A person ~1.9 units tall. Pivots: legs at hips, arms at shoulders; head on top of the torso.
+/** A person ~1.9 units tall. Pivots: legs at hips, arms at shoulders; head on top of the torso.
+ *  spec: skin, shirt, pants, hair ('none' for bald), shoes, plus optional vest, badge, stripe, hat, bandana, shades. */
 export function makeCharacter(spec) {
   const s = { skin: '#c98a5e', shirt: '#ff4fa3', pants: '#2b3a67', hair: '#2a1a12', shoes: '#222222', ...spec };
   const root = new THREE.Group();
@@ -38,16 +41,16 @@ export function makeCharacter(spec) {
   torso.add(part(torsoBoxes));
 
   const head = pivot(0, 1.66, 0);
-  const hb = [
+  const headBoxes = [
     [0, 0.22, 0, 0.44, 0.44, 0.44, s.skin],
     [-0.1, 0.25, 0.225, 0.08, 0.06, 0.02, '#1b1b1b'], [0.1, 0.25, 0.225, 0.08, 0.06, 0.02, '#1b1b1b'],
     [0, 0.1, 0.225, 0.14, 0.04, 0.02, shade(s.skin, -0.35)],
   ];
-  if (s.hair !== 'none') hb.push([0, 0.42, -0.02, 0.48, 0.1, 0.48, s.hair], [0, 0.28, -0.2, 0.48, 0.3, 0.1, s.hair]);
-  if (s.hat) hb.push([0, 0.48, 0, 0.5, 0.12, 0.5, s.hat], [0, 0.44, 0.28, 0.5, 0.05, 0.2, s.hat]);
-  if (s.bandana) hb.push([0, 0.36, 0, 0.47, 0.08, 0.47, s.bandana]);
-  if (s.shades) hb.push([0, 0.25, 0.23, 0.42, 0.08, 0.02, '#101010']);
-  head.add(part(hb));
+  if (s.hair !== 'none') headBoxes.push([0, 0.42, -0.02, 0.48, 0.1, 0.48, s.hair], [0, 0.28, -0.2, 0.48, 0.3, 0.1, s.hair]);
+  if (s.hat) headBoxes.push([0, 0.48, 0, 0.5, 0.12, 0.5, s.hat], [0, 0.44, 0.28, 0.5, 0.05, 0.2, s.hat]);
+  if (s.bandana) headBoxes.push([0, 0.36, 0, 0.47, 0.08, 0.47, s.bandana]);
+  if (s.shades) headBoxes.push([0, 0.25, 0.23, 0.42, 0.08, 0.02, '#101010']);
+  head.add(part(headBoxes));
 
   const armL = pivot(-0.42, 1.58, 0), armR = pivot(0.42, 1.58, 0);
   for (const arm of [armL, armR]) {
@@ -62,21 +65,21 @@ export function makeCharacter(spec) {
   return root;
 }
 
-// Swing limbs; phase advances with distance walked. aim: arm raised pointing forward.
+/** Swings limbs; phase advances with distance walked, amount 0..1 scales the stride. aim: right arm raised forward. */
 export function animateCharacter(model, phase, amount, aim = false, punch = 0) {
   const p = model.userData.parts;
-  const sw = Math.sin(phase) * 0.8 * amount;
-  p.legL.rotation.x = sw;
-  p.legR.rotation.x = -sw;
-  p.armL.rotation.x = -sw * 0.8;
-  p.armR.rotation.x = aim ? -Math.PI / 2 : sw * 0.8;
+  const swing = Math.sin(phase) * 0.8 * amount;
+  p.legL.rotation.x = swing;
+  p.legR.rotation.x = -swing;
+  p.armL.rotation.x = -swing * 0.8;
+  p.armR.rotation.x = aim ? -Math.PI / 2 : swing * 0.8;
   if (punch > 0) p.armR.rotation.x = -Math.PI / 2 - Math.sin(punch * Math.PI) * 0.3;
   if (aim) p.armL.rotation.x = -1.2;
   p.torso.position.y = 0.9 + Math.abs(Math.sin(phase)) * 0.05 * amount;
 }
 
-// A classic car body facing +z (other body styles: vehicle-models.js). Returns a Group with
-// userData {lights: [red, blue meshes], model}.
+/** A classic car body facing +z (other body styles: vehicle-models.js). Returns a Group with
+ *  userData {lights: [red, blue meshes], model}. */
 export function makeCar(key, color) {
   const m = CAR_MODELS[key];
   const L = m.len, W = m.wid, H = m.hgt;
@@ -140,24 +143,26 @@ export function makeCar(key, color) {
   g.add(part(boxes, glow));
   const lights = [];
   if (m.police) {
+    // Light bar: red and blue blocks, each with an additive glow sprite the siren flashes.
     const barY = rideY + 0.66 + 0.6 + 0.16;
-    const r = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.26, 0.42), redLightMat.clone());
-    r.position.set(-0.42, barY, -0.15);
-    const bl = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.26, 0.42), blueLightMat.clone());
-    bl.position.set(0.42, barY, -0.15);
-    g.add(r, bl);
-    lights.push(r, bl);
-    for (const [m, col] of [[r, '#ff2040'], [bl, '#2060ff']]) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(col), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-      s.scale.setScalar(3.2);
-      m.add(s);
-      m.userData.glow = s;
+    const red = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.26, 0.42), redLightMat.clone());
+    red.position.set(-0.42, barY, -0.15);
+    const blue = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.26, 0.42), blueLightMat.clone());
+    blue.position.set(0.42, barY, -0.15);
+    g.add(red, blue);
+    lights.push(red, blue);
+    for (const [lamp, col] of [[red, '#ff2040'], [blue, '#2060ff']]) {
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(col), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      halo.scale.setScalar(3.2);
+      lamp.add(halo);
+      lamp.userData.glow = halo;
     }
   }
   g.userData = { lights, model: key };
   return g;
 }
 
+/** The SKYEYE police helicopter; userData {rotor, tail} spin. */
 export function makeHelicopter() {
   const g = new THREE.Group();
   g.add(part([
@@ -181,14 +186,14 @@ export function makeHelicopter() {
   return g;
 }
 
-// Glowing mission marker column + ground ring.
-// Thin a marker's column and beam as the viewer gets close (d = distance in world units).
+/** Thins a marker's column and beam as the viewer gets close (d = distance in world units). */
 export function fadeMarker(m, d) {
   const k = Math.min(1, Math.max(0, (d - 3) / 25));
   m.children[0].material.opacity = 0.06 + 0.29 * k;
   if (m.userData.beam) m.userData.beam.material.opacity = 0.08 + 0.42 * k;
 }
 
+/** A mission marker: glowing column, ground ring, spinning chevron, city-high light beam and a glow pool. */
 export function makeMarker(color = '#ffd23f') {
   const g = new THREE.Group();
   const col = new THREE.Mesh(
@@ -202,13 +207,13 @@ export function makeMarker(color = '#ffd23f') {
   chev.rotation.x = Math.PI;
   chev.position.y = 7.2;
   // Tall light beam visible across the city: open cylinder, vertex alpha fading upwards (additive).
-  const bg = new THREE.CylinderGeometry(0.9, 1.25, 90, 10, 6, true);
-  bg.translate(0, 45, 0);
-  const bp = bg.attributes.position, bcol = [];
+  const beamGeo = new THREE.CylinderGeometry(0.9, 1.25, 90, 10, 6, true);
+  beamGeo.translate(0, 45, 0);
+  const beamPos = beamGeo.attributes.position, beamCols = [];
   const c3 = new THREE.Color(color);
-  for (let i = 0; i < bp.count; i++) { const k = Math.pow(1 - bp.getY(i) / 90, 1.6); bcol.push(c3.r * k, c3.g * k, c3.b * k); }
-  bg.setAttribute('color', new THREE.Float32BufferAttribute(bcol, 3));
-  const beam = new THREE.Mesh(bg, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  for (let i = 0; i < beamPos.count; i++) { const k = Math.pow(1 - beamPos.getY(i) / 90, 1.6); beamCols.push(c3.r * k, c3.g * k, c3.b * k); }
+  beamGeo.setAttribute('color', new THREE.Float32BufferAttribute(beamCols, 3));
+  const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: glowTexture(color), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 }));
   pool.rotation.x = -Math.PI / 2;
   pool.position.y = 0.1;

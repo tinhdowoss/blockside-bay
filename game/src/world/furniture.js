@@ -14,14 +14,16 @@ const HALF = ROAD_W / 2;
 // ---- signal timing -------------------------------------------------------------------------------
 // Per junction: traffic along x gets green, then amber, then all-red, then the same for z.
 const GREEN = 9, AMBER = 2.2, CLEAR = 1, CYCLE = 2 * (GREEN + AMBER + CLEAR);
+const WAVE_OFFSET = 2.6;   // seconds each junction lags its neighbour: the green wave
 export const signals = { t: 0, heads: [], lamps: null, acc: 0 };
 // [x, z, radius] areas left empty of signal posts (set before the city is built; used by staged shots
 // whose camera would otherwise sit right behind a post).
 export const furnitureClear = [];
 const cleared = (x, z) => furnitureClear.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r);
 
+/** The light ('green' | 'amber' | 'red') shown to traffic travelling along axis at junction (i, j). */
 export function signalAt(i, j, axis, t = signals.t) {
-  const ph = (((t + (i + j) * 2.6) % CYCLE) + CYCLE) % CYCLE;
+  const ph = (((t + (i + j) * WAVE_OFFSET) % CYCLE) + CYCLE) % CYCLE;
   const half = GREEN + AMBER + CLEAR;
   const local = axis === 'x' ? ph : (ph + half) % CYCLE;
   if (local < GREEN) return 'green';
@@ -29,8 +31,11 @@ export function signalAt(i, j, axis, t = signals.t) {
   return 'red';
 }
 
+// Lamp colour per state as [r, g, b] (scaled by 1/4.2 for the instance colour; >1 blooms) plus its
+// height offset in the signal head.
 const LAMP = { red: [4.2, 0.35, 0.4, 0.45], amber: [3.6, 2.2, 0.3, 0], green: [0.3, 3.4, 1.2, -0.45] };
 
+/** Scatters furniture along every block's sidewalks, builds the signal posts and adds it all to parent. */
 export function buildFurniture(parent) {
   const r = makeRng(5150);
   const vc = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -103,6 +108,7 @@ function paperBox(B, x, z, yaw, r) {
   B.box('vc', x, 0.62, z, 0.45, 0.3, 0.52, { ry: yaw, color: '#dfe8f0' });
   B.box('vc', x, 0.06, z, 0.4, 0.12, 0.4, { ry: yaw, color: '#2a2a3a' });
 }
+// BAYLINK bus shelter: roof, posts, glass back, lit advert panel, seat and a stop sign.
 function shelter(B, x, z, yaw) {
   const s = Math.sin(yaw), c = Math.cos(yaw);
   const p = (dx, dz) => [x + dx * c + dz * s, z - dx * s + dz * c];
@@ -119,6 +125,7 @@ function shelter(B, x, z, yaw) {
   box('vc', 2.4, 2.95, 0.75, 0.06, 0.6, 0.7, '#2ee6c8');
   box('vc', 2.43, 2.95, 0.75, 0.04, 0.2, 0.5, '#ffffff');
 }
+// A signal post at a junction corner with two heads (one per road axis); (sx, sz) point into the junction.
 function signalPost(B, x, z, i, j, sx, sz) {
   if (cleared(x, z)) return;
   B.box('vc', x, 2.8, z, 0.26, 5.6, 0.26, { color: '#3a3a48' });
@@ -131,7 +138,8 @@ function signalPost(B, x, z, i, j, sx, sz) {
   for (const h of heads) {
     B.box('vc', (x + h.hx) / 2, 5.2, (z + h.hz) / 2, Math.abs(h.hx - x) + 0.15, 0.15, Math.abs(h.hz - z) + 0.15, { color: '#3a3a48' });
     B.box('vc', h.hx, 4.6, h.hz, h.fx ? 0.4 : 0.55, 1.5, h.fz ? 0.4 : 0.55, { color: '#22222c' });
-    for (const [, lamp] of Object.entries(LAMP)) {
+    // Unlit lenses for all three lamps; the lit one is an instance drawn over them.
+    for (const lamp of Object.values(LAMP)) {
       B.box('vc', h.hx + h.fx * 0.21, 4.6 + lamp[3], h.hz + h.fz * 0.21, h.fx ? 0.04 : 0.32, 0.32, h.fz ? 0.04 : 0.32, { color: '#3a3038' });
     }
     // Visor
@@ -141,6 +149,7 @@ function signalPost(B, x, z, i, j, sx, sz) {
 }
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _c = new THREE.Color(), _up = new THREE.Vector3(0, 1, 0);
+/** Advances the signal clock; five times a second (or when forced) moves each lit lamp to its current state. */
 export function updateFurniture(dt, force = false) {
   signals.t += dt;
   signals.acc += dt;

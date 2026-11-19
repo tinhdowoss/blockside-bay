@@ -1,4 +1,5 @@
-// Box batcher: merges thousands of voxel boxes into one BufferGeometry per material.
+// Box batcher: merges thousands of voxel boxes into one BufferGeometry per material, so a whole city
+// layer draws in a handful of calls. Boxes carry a vertex colour and either stretched or world-tiled UVs.
 const THREE = window.THREE;
 
 // Each face: name, normal, tangent a, tangent b (a x b = normal).
@@ -10,6 +11,7 @@ const FACES = [
   ['pz', [0, 0, 1], [1, 0, 0], [0, 1, 0]],
   ['nz', [0, 0, -1], [-1, 0, 0], [0, 1, 0]],
 ];
+// Quad corners in (a, b) tangent space, counter-clockwise.
 const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
 const _v = new THREE.Vector3();
 const _n = new THREE.Vector3();
@@ -22,13 +24,15 @@ export class Batcher {
     this.groups = new Map();
   }
 
+  /** Registers a material under a key (first registration wins); chainable. */
   material(key, mat) {
     if (!this.groups.has(key)) this.groups.set(key, { mat, pos: [], nor: [], uv: [], col: [], idx: [] });
     return this;
   }
 
-  // Adds a box centred at (x,y,z). opts: uv (world units per texture tile, 0 = stretch), ry (yaw),
-  // color (vertex colour), top (material key for the top face), faces (subset like 'py,pz'), matrix.
+  /** Adds a box centred at (x,y,z). opts: uv (world units per texture tile, 0 = stretch), uo (u offset),
+   *  ry (yaw), color (vertex colour), top / bottom (material key for the top / bottom face),
+   *  faces (subset like 'py,pz'), skip (faces to leave out), matrix (full transform instead of x,y,z + ry). */
   box(key, x, y, z, sx, sy, sz, opts = {}) {
     const uvs = opts.uv || 0;
     const only = opts.faces ? opts.faces.split(',') : null;
@@ -55,6 +59,7 @@ export class Batcher {
         g.nor.push(_n.x, _n.y, _n.z);
         g.col.push(_c.r, _c.g, _c.b);
         if (uvs) {
+          // World-tiled UVs: project the (unrotated) world corner onto the face tangents.
           const wx = lx + base[0], wy = ly + base[1], wz = lz + base[2];
           const u = (a[0] * wx + a[1] * wy + a[2] * wz) / uvs;
           const v = (b[0] * wx + b[1] * wy + b[2] * wz) / uvs;
@@ -66,6 +71,7 @@ export class Batcher {
     return this;
   }
 
+  /** One mesh per non-empty material, in a Group; opaque meshes cast shadows when shadows is on. */
   build(shadows = true) {
     const root = new THREE.Group();
     for (const [, g] of this.groups) {
@@ -86,7 +92,7 @@ export class Batcher {
   }
 }
 
-// One vertex-coloured mesh from a list of [x,y,z,sx,sy,sz,color] boxes.
+/** One vertex-coloured mesh from a list of [x,y,z,sx,sy,sz,color,yaw?] boxes. */
 export function colorBoxes(list, material) {
   const b = new Batcher().material('m', material);
   for (const p of list) b.box('m', p[0], p[1], p[2], p[3], p[4], p[5], { color: p[6], ry: p[7] || 0 });
@@ -94,4 +100,5 @@ export function colorBoxes(list, material) {
   return g.children[0];
 }
 
+/** A fresh vertex-coloured Lambert material. */
 export const LAMBERT_VC = () => new THREE.MeshLambertMaterial({ vertexColors: true });

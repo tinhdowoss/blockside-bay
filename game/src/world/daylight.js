@@ -5,6 +5,7 @@ import { city } from './city.js';
 import { makeRng } from '../core/rng.js';
 
 const THREE = window.THREE;
+const DAY_SECONDS = 900;   // a full in-game day lasts 15 real minutes
 
 // Key colours through the day:
 // [hour, skyTop, skyHorizon, sunColor, sunIntensity, hemiIntensity, night, hazeColor, hazeNear, hazeFar]
@@ -22,6 +23,7 @@ const KEYS = [
   [24, '#160c52', '#6a2a8a', '#a8b8ff', 0.45, 0.85, 1, '#3a1d6a', 70, 430],
 ];
 
+// fixed: the clock stands still (staged screenshots). night: 0 day .. 1 full night. golden: 0..1 around 18:00.
 export const sky = { hour: 11, night: 0, sun: null, hemi: null, dome: null, stars: null, fixed: false, sunDir: new THREE.Vector3(0, 1, 0), golden: 0, sunColor: new THREE.Color(), horizon: new THREE.Color() };
 
 // Fog with a soft exponential roll-off instead of a hard linear ramp: near streets stay crisp, the far
@@ -62,6 +64,7 @@ void main(){
   gl_FragColor = vec4(c, 1.0);
 }`;
 
+/** Adds the sky dome, star field, hemisphere light, shadow-casting sun and fog to the scene. */
 export function setupSky(scene) {
   const geo = new THREE.SphereGeometry(1200, 32, 20);
   const mat = new THREE.ShaderMaterial({
@@ -78,7 +81,7 @@ export function setupSky(scene) {
   scene.add(sky.dome);
 
   // Blocky stars (a few brighter, coloured ones)
-  const sg = new THREE.BufferGeometry();
+  const starGeo = new THREE.BufferGeometry();
   const pts = [], cols = [], r = makeRng(99);
   for (let i = 0; i < 520; i++) {
     const a = r() * Math.PI * 2, e = 0.12 + r() * 1.35;
@@ -86,9 +89,9 @@ export function setupSky(scene) {
     const k = r(), b = 0.6 + r() * 0.4;
     cols.push(b * (k < 0.1 ? 1 : 0.9), b * (k < 0.1 ? 0.8 : 0.92), b);
   }
-  sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  sg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-  sky.stars = new THREE.Points(sg, new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, transparent: true, fog: false, vertexColors: true }));
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  starGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  sky.stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, transparent: true, fog: false, vertexColors: true }));
   scene.add(sky.stars);
 
   sky.hemi = new THREE.HemisphereLight(0xcfeaff, 0xffd8b0, 1.2);
@@ -96,8 +99,8 @@ export function setupSky(scene) {
   sky.sun = new THREE.DirectionalLight(0xffffff, 2.5);
   sky.sun.castShadow = true;
   sky.sun.shadow.mapSize.set(2048, 2048);
-  const sc = sky.sun.shadow.camera;
-  sc.left = -85; sc.right = 85; sc.top = 85; sc.bottom = -85; sc.near = 10; sc.far = 420;
+  const shadowCam = sky.sun.shadow.camera;
+  shadowCam.left = -85; shadowCam.right = 85; shadowCam.top = 85; shadowCam.bottom = -85; shadowCam.near = 10; shadowCam.far = 420;
   sky.sun.shadow.bias = -0.0006;
   sky.sun.shadow.normalBias = 0.06;
   sky.sun.shadow.radius = 3;
@@ -106,6 +109,7 @@ export function setupSky(scene) {
 }
 
 const ca = new THREE.Color(), cb = new THREE.Color();
+// Blends the two KEYS rows either side of hour h.
 function lerpKey(h) {
   let i = 0;
   while (i < KEYS.length - 2 && KEYS[i + 1][0] <= h) i++;
@@ -116,13 +120,14 @@ function lerpKey(h) {
   return { top: col(1), horizon: col(2), sunCol: col(3), sunI: num(4), hemiI: num(5), night: num(6), haze: col(7), near: num(8), far: num(9) };
 }
 
+/** Sets the clock (any number wraps into 0..24). */
 export function setHour(h) { sky.hour = ((h % 24) + 24) % 24; }
 
 const WHITE = new THREE.Color('#ffffff');
 const _sun = new THREE.Vector3();
-// Advance the clock and update lights; focus = where the player is (shadow camera follows).
+/** Advances the clock and updates lights; focus = where the player is (shadow camera follows). Returns night 0..1. */
 export function updateSky(dt, focus, scene) {
-  if (!sky.fixed) sky.hour = (sky.hour + dt * (24 / 900)) % 24; // full day = 15 minutes
+  if (!sky.fixed) sky.hour = (sky.hour + dt * (24 / DAY_SECONDS)) % 24;
   const k = lerpKey(sky.hour);
   sky.night = k.night;
   const golden = Math.max(0, 1 - Math.abs(sky.hour - 18) / 1.6) * (1 - k.night);
