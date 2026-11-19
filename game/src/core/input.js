@@ -1,4 +1,4 @@
-// Keyboard + mouse input with pointer lock; keys are tracked by KeyboardEvent.code.
+// Keyboard + mouse input with pointer lock; keys are tracked by KeyboardEvent.code (layout independent).
 // Listeners fill `input` as events arrive; systems poll it each frame and endFrame() clears the
 // per-frame parts (taps, mouse deltas, wheel).
 
@@ -11,7 +11,7 @@ export const input = {
   firePressed: false,
   wheel: 0,
   locked: false,
-  lastMouseMove: -10,
+  lastMouseMove: -10,     // seconds (performance clock) of the last locked mouse move
 };
 
 /** Installs the window/canvas listeners; onKey(code) is called on every keydown. */

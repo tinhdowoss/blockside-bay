@@ -1,5 +1,5 @@
 // The player on foot (walk, sprint, crouch, dodge roll, collide, face the aim) and the hand-off of
-// controls to a car. The camera lives in camera.js.
+// controls to a car. The camera lives in camera.js; entering and leaving cars lives in carjack.js.
 import { PLAYER } from '../core/config.js';
 import { makeCharacter, animateCharacter } from '../world/models.js';
 import { collideCircle } from '../world/city.js';
@@ -80,10 +80,10 @@ export function updatePlayer(dt) {
     emit('roll');
   }
   const canSprint = sprint && player.stamina > 0.05;
-  const spd = (fwd || side) ? (canSprint ? PLAYER.sprint : player.crouch ? PLAYER.walk * 0.5 : PLAYER.walk) : 0;
-  player.stamina = Math.max(0, Math.min(1, player.stamina + (canSprint && spd ? -0.18 : 0.25) * dt));
-  if (canSprint && spd) bumpSkill('stamina', dt * 0.0015);
-  player.speed += (spd - player.speed) * Math.min(1, dt * 10);
+  const targetSpeed = (fwd || side) ? (canSprint ? PLAYER.sprint : player.crouch ? PLAYER.walk * 0.5 : PLAYER.walk) : 0;
+  player.stamina = Math.max(0, Math.min(1, player.stamina + (canSprint && targetSpeed ? -0.18 : 0.25) * dt));
+  if (canSprint && targetSpeed) bumpSkill('stamina', dt * 0.0015);
+  player.speed += (targetSpeed - player.speed) * Math.min(1, dt * 10);
   if (player.rolling > 0) {
     player.rolling = Math.max(0, player.rolling - dt);
     mx = player.rollDir.x; mz = player.rollDir.z;
@@ -101,7 +101,7 @@ export function updatePlayer(dt) {
   game.stats.walked = (game.stats.walked || 0) + player.speed * dt;
   // Facing: aim direction while armed or shooting, else movement direction.
   player.aiming = game.weapon > 0 || input.fire;
-  const targetYaw = player.rolling > 0 ? Math.atan2(mx, mz) : player.aiming ? player.camYaw : (spd ? Math.atan2(mx, mz) : player.yaw);
+  const targetYaw = player.rolling > 0 ? Math.atan2(mx, mz) : player.aiming ? player.camYaw : (targetSpeed ? Math.atan2(mx, mz) : player.yaw);
   let dy = targetYaw - player.yaw;
   dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   player.yaw += dy * Math.min(1, dt * 14);

@@ -36,12 +36,13 @@ export function setVolume(music, sfx, master = game.masterVol ?? 1) {
 
 /** Tunes the radio and remembers the station in the run state. */
 export function setStation(i) { setStationMusic(i); game.radioStation = radio.station; }
-/** Next station (the R key): the current car remembers it. */
+/** Next station (the E key while driving): the current car remembers it. */
 export function nextStation() {
   setStation(radio.station + 1);
   if (player.vehicle) player.vehicle.radioStation = radio.station;
   S.blip(880);
 }
+/** Turns the radio on or off (the music bus fades accordingly on the next scheduler tick). */
 export function setRadioPlaying(playing) { radio.on = playing; }
 
 let elapsed = 0;

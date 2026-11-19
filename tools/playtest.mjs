@@ -1,7 +1,7 @@
 // BLOCKSIDE BAY play-test: serves game/, opens the real title screen, starts a new game and drives
 // through the core loop with simulated input (walk, steal a car, drive, drift, shoot, draw the police,
 // pause), printing console errors and saving a frame per step to --out. Ends with "errors: N".
-// Usage: PW_DIR=/path/with/node_modules node tools/playtest.mjs --out /tmp/pt
+// Usage: PW_DIR=/path/with/node_modules node tools/playtest.mjs [--out /tmp/pt]  (default /tmp/blockside-playtest)
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
@@ -44,13 +44,13 @@ await snap('02-newgame');
 await hold(['KeyW'], 2500);                  // walk to the mission marker / street
 await snap('03-walk');
 // Walk up to the nearest traffic car and steal it.
-const near = await page.evaluate(() => {
+const stolenName = await page.evaluate(() => {
   const { vehicles, player, placePlayer } = window.__bb;
   const v = vehicles.filter((c) => c.driver === 'traffic').sort((a, b) => Math.hypot(a.x - player.x, a.z - player.z) - Math.hypot(b.x - player.x, b.z - player.z))[0];
   placePlayer(v.x + 2.5, v.z, 0);
   return v.spec.name;
 });
-console.log('stealing', near);
+console.log('stealing', stolenName);
 await page.keyboard.press('KeyF');
 await page.waitForTimeout(500);
 await hold(['KeyW'], 3000);

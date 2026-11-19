@@ -1,6 +1,6 @@
 // BLOCKSIDE BAY: tuning constants and static tables shared by every system (city grid, districts,
 // facade palettes, vehicle models, weapons, rep levels, police call signs, wanted rules, radio stations,
-// save keys). Data only: nothing here runs or changes at play time.
+// save keys). Data only: nothing here runs or changes at play time. Units: world units (~1 m), seconds.
 
 export const GAME_TITLE = 'BLOCKSIDE BAY';
 
@@ -86,8 +86,8 @@ export const WANTED = {
   max: 5,
   evadeTime: [0, 6, 8, 10, 13, 16],   // seconds out of sight to drop a star
   policeCars: [0, 1, 2, 4, 5, 6],      // simultaneous pursuit cars
-  heliAt: 3,
-  roadblockAt: 4,
+  heliAt: 3,                           // stars at which the SKYEYE helicopter joins
+  roadblockAt: 4,                      // stars at which roadblocks appear
 };
 
 export const HEADSHOT_BONUS = 150;
