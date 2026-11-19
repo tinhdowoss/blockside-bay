@@ -1,6 +1,7 @@
 // Screenshot staging: index.html?shot=<name>&seed=1 builds a deterministic scene with the game's own
-// systems (no faked pixels), freezes the simulation and sets window.__shotReady = true.
-import { CELL } from '../core/config.js';
+// systems (no faked pixels), freezes the simulation and sets window.__shotReady = true for
+// tools/capture.mjs. Scenes: chase (cover), title, combat, map. Also exposes window.__bb for play-tests.
+import { CELL, WEAPONS } from '../core/config.js';
 import { city } from '../world/city.js';
 import { setHour, sky } from '../world/daylight.js';
 import { Vehicle, vehicles } from '../gameplay/vehicles.js';
@@ -20,7 +21,6 @@ import { skidCar } from '../fx/skidmarks.js';
 import { post } from '../fx/post.js';
 import { spawnTrafficOn } from '../world/traffic.js';
 import { spawnPed, peds, removePed, posePed } from '../world/pedestrians.js';
-import { WEAPONS } from '../core/config.js';
 import { repFromStory } from '../gameplay/progression.js';
 import { game } from '../core/state.js';
 import { saveGame } from '../core/save.js';
@@ -32,11 +32,13 @@ const THREE = window.THREE;
 // traffic-signal post that would otherwise fill the right third of the frame.
 if (new URLSearchParams(location.search).get('shot') === 'chase') furnitureClear.push([199, 137, 4]);
 
+// Removes every vehicle and pedestrian inside a rectangle so the staged cast has the street to itself.
 function clearStreet(x0, z0, x1, z1) {
   for (const v of [...vehicles]) if (v.x > x0 && v.x < x1 && v.z > z0 && v.z < z1) v.remove();
   for (const p of [...peds]) if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) removePed(p);
 }
 
+// A few zero-dt renders so shadows, post buffers and the HUD catch up with the staged state.
 function settle(api, frames = 4) {
   for (let i = 0; i < frames; i++) api.loop.render(0, 0);
 }
@@ -177,15 +179,15 @@ const SCENES = {
     // Re-place the squad along the street ahead of the player.
     for (const s of [...shooters]) { s.x = 9999; }
     const spots = [[11, -3.2], [15, 2.8], [19.5, -1.5], [9, 4.2], [24, 3.4], [13.5, -4.6]];
-    const sq = ms.enemies;
-    sq.forEach((s, i) => {
+    const squad = ms.enemies;
+    squad.forEach((s, i) => {
       const p = spots[i % spots.length];
       s.x = X + p[0]; s.z = Z + p[1]; s.yaw = -Math.PI / 2 + (i % 2 ? 0.2 : -0.2);
       s.phase = i;
     });
-    const boss = sq.find((s) => s.boss);
+    const boss = squad.find((s) => s.boss);
     boss.x = X + 16.5; boss.z = Z + 0.4;
-    const downed = sq.filter((s) => !s.boss).slice(0, 3);
+    const downed = squad.filter((s) => !s.boss).slice(0, 3);
     downed.forEach((s, i) => { s.alive = false; s.deadT = 1; s.fallDir = Math.PI / 2 + (i - 1) * 0.4; s.x = X + 6 + i * 3.2; s.z = Z + (i - 1) * 2.4 + 0.6; });
     for (const s of shooters) {
       s.model.position.set(s.x, 0, s.z);
@@ -203,7 +205,7 @@ const SCENES = {
     // Muzzle flash, tracers and the headshot pop-up
     const m = new THREE.Vector3(X + 0.9, 1.55, Z - 0.42);
     flash(m.x, m.y, m.z, 1.8); holdFlash();
-    const victim = sq.filter((s) => s.alive && !s.boss).sort((a, b) => a.z - b.z)[0];
+    const victim = squad.filter((s) => s.alive && !s.boss).sort((a, b) => a.z - b.z)[0];
     const head = new THREE.Vector3(victim.x, 1.9, victim.z);
     tracer(m, head);
     tracer(m, new THREE.Vector3(boss.x + 0.3, 1.2, boss.z - 1.4));
@@ -213,6 +215,7 @@ const SCENES = {
     sparks(head.x, head.y, head.z, 8, '#ffe9a0');
     sparks(boss.x + 0.3, 0.2, boss.z - 1.4, 14, '#fff0c0');
     sparks(X + 0.8, 1.3, Z + 0.9, 10);
+    // Spent brass on the asphalt (long-lived, motionless particles).
     for (let i = 0; i < 6; i++) spawn(X + 3 + i * 0.4, 0.06, Z - 0.6 + (i % 2) * 0.3, 0, 0, 0, 99, 0.12, '#ffd040');
     clearCenterText();
     // Civilians on Neon Mile scattering from the gunfight; the nearest duck and cover.
@@ -245,10 +248,11 @@ const SCENES = {
   },
 };
 
+/** Builds the named scene (main.js passes the boot API); unknown names report and finish at once. */
 export function stageShot(name, api) {
   const fn = SCENES[name];
   if (!fn) { console.error('unknown shot', name); window.__shotReady = true; return; }
   fn(api);
 }
-// Debug handle for tools/playtest.mjs.
+// Debug handle for tools/playtest*.mjs.
 window.__bb = { police, vehicles, player, game, ms, placePlayer };

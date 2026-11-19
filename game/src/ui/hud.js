@@ -1,6 +1,7 @@
 // HUD: mission panel (stage, objective, next step, tip), street-rep bar, police response panel (every unit
 // by call sign with distance and state), clock, cash, wanted stars, weapon slots with ammo and locks,
 // health/armor, speedometer with gear and body condition, radio, crosshair, popups, banners and toasts.
+// Styles live in game/hud.css.
 import { WEAPONS } from '../core/config.js';
 import { MISSIONS } from '../data/missions-data.js';
 import { game, on } from '../core/state.js';
@@ -23,6 +24,7 @@ let root, camera, els = {};
 const popups = [];
 let banner = null, toast = null, shownCash = 0, lastHTML = {}, hitT = 0;
 
+// 16x8 weapon slot icons: 'X' is a lit pixel.
 const ICONS = {
   fists: ['................', '.....XXXXXX.....', '....XXXXXXXX....', '....XX.XX.XX....', '....XXXXXXXX....', '.....XXXXXXX....', '......XXXXX.....', '......XXXXX.....'],
   pistol: ['................', '..XXXXXXXXXXXX..', '..XXXXXXXXXXXX..', '..XXXXXXX.......', '..XXXX.X........', '..XXXX..........', '..XXXX..........', '................'],
@@ -47,6 +49,7 @@ function setHTML(el, key, html) {
   el.innerHTML = html;
 }
 
+/** Builds the HUD markup once and hooks the popup / banner / toast / hit events. */
 export function setupHud(cam) {
   camera = cam;
   root = document.getElementById('hud');
@@ -107,6 +110,7 @@ export function setupHud(cam) {
   shownCash = game.cash;
 }
 
+// A floating world-space label ({ text, x, y, z, color, big, hold }).
 function addPopup(p) {
   const el = document.createElement('div');
   el.className = 'popup outl' + (p.big ? ' big' : '');
@@ -119,6 +123,7 @@ function addPopup(p) {
 }
 
 const v3 = new THREE.Vector3();
+// Positions a screen element over a world point (hidden when behind the camera).
 function place(el, x, y, z, lift = 0) {
   v3.set(x, y, z).project(camera);
   if (v3.z > 1) { el.style.display = 'none'; return; }
@@ -127,7 +132,8 @@ function place(el, x, y, z, lift = 0) {
   el.style.top = `${(-v3.y * 0.5 + 0.5) * innerHeight - lift}px`;
 }
 
-export function showHud(on_) { root.style.display = on_ ? 'block' : 'none'; }
+/** Shows or hides the whole HUD layer. */
+export function showHud(visible) { root.style.display = visible ? 'block' : 'none'; }
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -169,6 +175,7 @@ function updateRep(dt) {
   if (g && g.t > 0) { g.t -= dt; gain.textContent = `+${g.n} ${g.why}`; gain.style.opacity = Math.min(1, g.t * 2); } else gain.textContent = '';
 }
 
+// The BBPD RESPONSE panel: seen/lost status with the evade bar and the five nearest units.
 function updateResponse() {
   const r = responseReport();
   if (!r) { setHTML(els.response, 'resp', ''); els.response.style.display = 'none'; return; }
@@ -193,6 +200,7 @@ function updateWeapons() {
   setHTML(els.ammo, 'ammo', (w.clip ? (isReloading() ? 'RELOADING' : `${game.clip[w.id]} <small>/ ${game.ammo[w.id] || 0}</small>`) : '<small>MELEE</small>') + stance);
 }
 
+// Speedometer, gear + rev bar, body condition, damage warning and radio (only while in a vehicle).
 function updateSpeedo(v, now) {
   els.speedo.style.display = v ? 'block' : 'none';
   els.radio.style.display = v ? 'flex' : 'none';
@@ -225,6 +233,7 @@ function updateSpeedo(v, now) {
   els.radio.querySelectorAll('.eq i').forEach((b, i) => { b.style.height = `${r.levels[i] * 24 + 2}px`; b.style.background = r.color; });
 }
 
+/** Refreshes every HUD element for this frame. */
 export function updateHud(dt, now = performance.now() / 1000) {
   updateMission();
   updateRep(dt);
@@ -233,6 +242,7 @@ export function updateHud(dt, now = performance.now() / 1000) {
   // Clock, cash, stars
   const h = Math.floor(sky.hour), mi = Math.floor((sky.hour % 1) * 60);
   els.clock.textContent = `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}  ·  DAY ${1 + Math.floor(game.stats.playSeconds / 900)}`;
+  // The cash counter rolls towards the real total.
   shownCash += (game.cash - shownCash) * Math.min(1, dt * 6);
   if (Math.abs(game.cash - shownCash) < 1 || !dt) shownCash = game.cash;
   els.cash.textContent = `$${Math.round(shownCash).toLocaleString('en-US')}`;
@@ -288,16 +298,17 @@ export function updateHud(dt, now = performance.now() / 1000) {
   els.hurt.style.opacity = Math.max(0, parseFloat(els.hurt.style.opacity || 0) - dt * 2);
 }
 
+/** Shows the full-screen FLATLINED / CUFFED card (or hides it when title is empty). */
 export function showDown(title, sub) {
   els.downscreen.style.display = title ? 'flex' : 'none';
   if (title) { els.downscreen.querySelector('.t').textContent = title; els.downscreen.querySelector('.s').textContent = sub; }
 }
 
-
+/** Drops any banner or toast at once. */
 export function clearCenterText() {
   banner = null; toast = null;
   els.banner.innerHTML = ''; els.toastline.textContent = '';
 }
 
-// Freeze banners/popups (screenshot staging).
+/** A popup that never fades (screenshot staging). */
 export function holdPopup(p) { addPopup({ ...p, hold: true }); }

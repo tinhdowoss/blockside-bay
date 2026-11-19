@@ -1,6 +1,5 @@
 // The player on foot (walk, sprint, crouch, dodge roll, collide, face the aim) and the hand-off of
-// controls to a car.
-// The camera lives in camera.js.
+// controls to a car. The camera lives in camera.js.
 import { PLAYER } from '../core/config.js';
 import { makeCharacter, animateCharacter } from '../world/models.js';
 import { collideCircle } from '../world/city.js';
@@ -10,6 +9,7 @@ import { snapCamera } from './camera.js';
 import { game, bumpSkill, emit } from '../core/state.js';
 import { CAST } from '../data/cast.js';
 
+const ROLL_TIME = 0.42;   // seconds a dodge roll lasts
 
 export const player = {
   x: 60, z: 100, yaw: 0, vehicle: null, model: null,
@@ -17,18 +17,21 @@ export const player = {
   stamina: 1, hurt: 0, alive: true, crouch: false, rolling: 0, rollCD: 0, rollDir: null,
 };
 
+/** Builds Kai's voxel model and adds it to the scene. */
 export function setupPlayer(scene) {
-  const k = CAST.kai;
-  player.model = makeCharacter({ skin: k.skin, shirt: '#ff4fa3', pants: '#1f2a4a', hair: k.hair, shoes: '#ffffff', stripe: '#ffffff' });
+  const kai = CAST.kai;
+  player.model = makeCharacter({ skin: kai.skin, shirt: '#ff4fa3', pants: '#1f2a4a', hair: kai.hair, shoes: '#ffffff', stripe: '#ffffff' });
   scene.add(player.model);
 }
 
+/** Teleports the player (standing, not rolling) and snaps the camera behind them. */
 export function placePlayer(x, z, yaw = 0) {
   player.x = x; player.z = z; player.yaw = yaw; player.camYaw = yaw;
   player.crouch = false; player.rolling = 0;
   snapCamera();
 }
 
+/** Per-frame: mouse look, then either drive the current vehicle or move on foot. */
 export function updatePlayer(dt) {
   // Mouse look (both modes)
   const sens = game.sens ?? 1;
@@ -41,8 +44,8 @@ export function updatePlayer(dt) {
     // On the scooter Kai stays visible in the saddle, leaning with it; in cars and boats he is hidden.
     player.model.visible = !!v.spec.bike;
     if (v.spec.bike) {
-      const m = player.model, fx = Math.sin(v.heading), fz = Math.cos(v.heading);
-      m.position.set(v.x - fx * 0.3, 0.1, v.z - fz * 0.3);
+      const m = player.model, fwdX = Math.sin(v.heading), fwdZ = Math.cos(v.heading);
+      m.position.set(v.x - fwdX * 0.3, 0.1, v.z - fwdZ * 0.3);
       m.rotation.set(0, v.heading, 0);
       m.rotateZ(v.roll);
       m.scale.set(1, 1, 1);
@@ -56,6 +59,7 @@ export function updatePlayer(dt) {
   const fwd = (key('KeyW') ? 1 : 0) - (key('KeyS') ? 1 : 0);
   const side = (key('KeyD') ? 1 : 0) - (key('KeyA') ? 1 : 0);
   const sprint = key('ShiftLeft') || key('ShiftRight');
+  // Camera-relative move direction (unit length, or zero when no key is held).
   let mx = 0, mz = 0;
   if (fwd || side) {
     const s = Math.sin(player.camYaw), c = Math.cos(player.camYaw);
@@ -72,7 +76,7 @@ export function updatePlayer(dt) {
   if (tapped('Space') && !player.rolling && player.rollCD <= 0 && player.stamina > 0.2) {
     const s = Math.sin(player.camYaw), c = Math.cos(player.camYaw);
     player.rollDir = (fwd || side) ? { x: mx, z: mz } : { x: -s, z: -c };
-    player.rolling = 0.42; player.rollCD = 0.9; player.stamina -= 0.2; player.crouch = false;
+    player.rolling = ROLL_TIME; player.rollCD = 0.9; player.stamina -= 0.2; player.crouch = false;
     emit('roll');
   }
   const canSprint = sprint && player.stamina > 0.05;
@@ -89,6 +93,7 @@ export function updatePlayer(dt) {
   player.z += mz * player.speed * dt;
   const r = collideCircle(player.x, player.z, PLAYER.radius);
   player.x = r.x; player.z = r.z;
+  // Push out of vehicles (a circle of 45 % of the car's length).
   for (const v of vehicles) {
     const dx = player.x - v.x, dz = player.z - v.z, d = Math.hypot(dx, dz), m = v.spec.len * 0.45;
     if (d < m && d > 0.01) { player.x = v.x + (dx / d) * m; player.z = v.z + (dz / d) * m; }
@@ -105,6 +110,7 @@ export function updatePlayer(dt) {
   syncModel();
 }
 
+/** Poses the player model from the current state (walk cycle, aim, punch, crouch, roll tumble). */
 export function syncModel() {
   const m = player.model;
   m.position.set(player.x, 0, player.z);
@@ -113,7 +119,7 @@ export function syncModel() {
   animateCharacter(m, player.phase, Math.min(1, player.speed / 5), player.aiming && game.weapon > 0, player.punch);
   if (player.rolling > 0) {
     // Tuck and tumble forward once over the roll.
-    const k = 1 - player.rolling / 0.42;
+    const k = 1 - player.rolling / ROLL_TIME;
     m.position.y = 0.55 - Math.abs(Math.cos(k * Math.PI)) * 0.25;
     m.rotateX(k * Math.PI * 2);
     m.scale.set(1, 0.72, 1);
@@ -121,6 +127,7 @@ export function syncModel() {
   m.userData.parts.gun.visible = game.weapon > 0 && !(player.rolling > 0);
 }
 
+// WASD drive, Shift/Space handbrake; long fast drifts train the driving skill.
 function driveControls(v) {
   const c = v.controls;
   c.throttle = key('KeyW') ? 1 : 0;

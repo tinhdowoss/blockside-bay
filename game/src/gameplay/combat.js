@@ -1,5 +1,5 @@
 // Combat core: the shooter list (gang members, bosses, foot cops), damage to the player (armor first,
-// none while dodge-rolling, less behind cover) and to characters (headshots, takedowns, crimes), the
+// none while dodge-rolling, less inside a vehicle) and to characters (headshots, takedowns, crimes), the
 // ray tests weapons use, and slow health regen. Weapons live in weapons.js, the NPC brains in enemies.js.
 import { HEADSHOT_BONUS } from '../core/config.js';
 import { makeCharacter, animateCharacter } from '../world/models.js';
@@ -20,8 +20,10 @@ const GANG_LOOKS = {
   police: { shirt: '#1d3c8f', pants: '#1d2440', hat: '#1d2440', badge: true, skin: '#a8714c', hair: '#111111' },
 };
 
+/** Remembers the scene that shooter models are added to. */
 export function setupCombat(sc) { scene = sc; }
 
+/** Spawns an armed NPC of a faction (vipers, salt, police); opts: boss, name, guard, accuracy, tag, role, look. */
 export function spawnShooter(x, z, faction, opts = {}) {
   const look = { ...GANG_LOOKS[faction], ...(opts.look || {}) };
   const model = makeCharacter(look);
@@ -40,6 +42,7 @@ export function spawnShooter(x, z, faction, opts = {}) {
   return s;
 }
 
+/** Removes every shooter the filter accepts (default: all). */
 export function clearShooters(filter = () => true) {
   for (let i = shooters.length - 1; i >= 0; i--) {
     if (!filter(shooters[i])) continue;
@@ -48,9 +51,10 @@ export function clearShooters(filter = () => true) {
   }
 }
 
+/** Removes the shooter at index i. */
 export function removeShooter(i) { scene.remove(shooters[i].model); shooters.splice(i, 1); }
 
-// Pose a shooter's model: walking, aiming, or ducked low behind cover.
+/** Poses a shooter's model: walking, aiming, or ducked low behind cover. */
 export function syncShooter(s, speed) {
   const k = s.boss ? 1.12 : 1;
   s.model.position.set(s.x, 0, s.z);
@@ -60,6 +64,7 @@ export function syncShooter(s, speed) {
 }
 
 // ---- Damage to the player --------------------------------------------------------------
+/** Hurts the player by n from a direction: armor soaks 70 %, vehicles cut it to 40 %, rolls dodge it. */
 export function hurtPlayer(n, fromX, fromZ) {
   if (game.mode !== 'play' || player.rolling > 0) return;
   if (player.vehicle) n *= 0.4;
@@ -72,6 +77,7 @@ export function hurtPlayer(n, fromX, fromZ) {
 }
 
 // ---- Ray tests --------------------------------------------------------------------------
+// Distance along unit ray (o, d) to a sphere, or Infinity on a miss / behind the origin.
 function raySphere(o, d, cx, cy, cz, r) {
   const ox = o.x - cx, oy = o.y - cy, oz = o.z - cz;
   const b = ox * d.x + oy * d.y + oz * d.z;
@@ -82,15 +88,15 @@ function raySphere(o, d, cx, cy, cz, r) {
   return t > 0 ? t : Infinity;
 }
 
-// Characters hit along a ray, nearest first, at most `max` of them: [{ target, t, head }].
-// Crouched shooters are shorter (their spheres sit lower).
+/** Characters hit along a ray, nearest first, at most `max` of them: [{ target, t, head }].
+ *  Each body is a head sphere plus two torso/leg spheres; crouched shooters are shorter (their spheres sit lower). */
 export function rayCharacters(o, d, maxD, max = 1) {
   const hits = [];
   const test = (c, x, z, k, ky) => {
-    const th = raySphere(o, d, x, 1.88 * ky, z, 0.3 * k);
-    const tb = Math.min(raySphere(o, d, x, 1.3 * ky, z, 0.48 * k), raySphere(o, d, x, 0.55 * ky, z, 0.42 * k));
-    const t = Math.min(th, tb);
-    if (t < maxD) hits.push({ target: c, t, head: th <= tb });
+    const tHead = raySphere(o, d, x, 1.88 * ky, z, 0.3 * k);
+    const tBody = Math.min(raySphere(o, d, x, 1.3 * ky, z, 0.48 * k), raySphere(o, d, x, 0.55 * ky, z, 0.42 * k));
+    const t = Math.min(tHead, tBody);
+    if (t < maxD) hits.push({ target: c, t, head: tHead <= tBody });
   };
   for (const s of shooters) if (s.alive) test(s, s.x, s.z, s.model.scale.x, s.model.scale.y);
   for (const p of peds) if (p.state !== 'dead') test(p, p.x, p.z, 1, 1);
@@ -98,6 +104,7 @@ export function rayCharacters(o, d, maxD, max = 1) {
   return hits.slice(0, max);
 }
 
+/** Nearest vehicle (other than the player's) a ray hits before maxD: { v, t } with v null on a miss. */
 export function rayVehicles(o, d, maxD) {
   let best = { v: null, t: maxD };
   for (const v of vehicles) {
@@ -109,6 +116,7 @@ export function rayVehicles(o, d, maxD) {
 }
 
 // ---- Damage to characters -----------------------------------------------------------------
+/** Applies dmg to a shooter or pedestrian: takedown popups and bonuses, wanted stars for crimes, flee on survival. */
 export function damageCharacter(c, dmg, head, fromX, fromZ, at) {
   if (c.isShooter) {
     c.health -= dmg;
@@ -138,11 +146,14 @@ export function damageCharacter(c, dmg, head, fromX, fromZ, at) {
       if (head) emit('popup', { text: 'HEADSHOT', x: c.x, y: 2.3, z: c.z, color: '#ffe14a' });
       emit('crime', { x: c.x, z: c.z, kind: 'assault' });
       if (police.level < 2) addWanted(1);
-    } else { c.state = 'flee'; c.fleeT = 6; c.fx = c.x - fromX; c.fz = c.z - fromZ; const l = Math.hypot(c.fx, c.fz) || 1; c.fx /= l; c.fz /= l; }
+    } else {
+      c.state = 'flee'; c.fleeT = 6; c.fx = c.x - fromX; c.fz = c.z - fromZ;
+      const l = Math.hypot(c.fx, c.fz) || 1; c.fx /= l; c.fz /= l;
+    }
   }
 }
 
-// Slow health regen up to 40.
+/** Slow health regen up to 40. */
 export function updateCombat(dt) {
   if (game.health < 40 && game.health > 0) game.health = Math.min(40, game.health + dt * 1.5);
 }

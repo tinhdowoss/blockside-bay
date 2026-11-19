@@ -1,7 +1,7 @@
 // Title screen (blocky logo, Continue / New / Load / Controls / Settings / Credits, crew portraits) and
 // the pause menu shell (MAP, MISSIONS, STATS, SAVE, SETTINGS, CONTROLS, CREDITS tabs). Page contents
 // live in menu-pages.js, settings-menu.js and pause-map.js; this file owns layout, navigation,
-// transitions and menu sounds.
+// transitions and menu sounds. Styles live in game/menus.css.
 import { GAME_TITLE, SAVE_SLOTS } from '../core/config.js';
 import { drawBlockyTitle, textWidth } from './pixelfont.js';
 import { CAST, CREW, portraitURL } from '../data/cast.js';
@@ -17,13 +17,16 @@ import { settingsHTML, bindSettings, settingsKey, resetSettingsCursor } from './
 import { controlsHTML, creditsHTML, missionsHTML, statsHTML, saveHTML } from './menu-pages.js';
 import { drawPauseMap } from './pause-map.js';
 
+// actions: callbacks from main.js (newGame, continueGame, resume, save, quit).
 let root, actions = {}, titleSel = 0, titleSub = null, pauseTab = 'map', pauseSel = 0, titleItems = [];
 
+/** Stores main.js's callbacks and the #menus root. */
 export function setupMenus(acts) {
   actions = acts;
   root = document.getElementById('menus');
 }
 
+/** The BLOCKSIDE BAY logo drawn with the pixel font on a 300x104 canvas, with palm pixels either side. */
 export function logoCanvas() {
   const cv = document.createElement('canvas');
   cv.width = 300; cv.height = 104;
@@ -43,6 +46,7 @@ export function logoCanvas() {
 }
 
 // ---- Title ----------------------------------------------------------------------------
+/** Builds the title screen (menu items reflect the save slots). */
 export function showTitle() {
   const latest = latestSlot();
   titleItems = [
@@ -72,21 +76,23 @@ export function showTitle() {
 }
 
 function renderTitleMenu() {
-  const m = root.querySelector('#title .menu');
-  if (!m) return;
-  m.innerHTML = titleItems.map((it, i) => `<div class="btn ${i === titleSel ? 'sel' : ''}" data-i="${i}">${it.label}<small>${it.sub}</small></div>`).join('');
-  m.querySelectorAll('.btn').forEach((b) => {
+  const menu = root.querySelector('#title .menu');
+  if (!menu) return;
+  menu.innerHTML = titleItems.map((it, i) => `<div class="btn ${i === titleSel ? 'sel' : ''}" data-i="${i}">${it.label}<small>${it.sub}</small></div>`).join('');
+  menu.querySelectorAll('.btn').forEach((b) => {
     b.onmouseenter = () => { if (titleSel !== +b.dataset.i) uiHover(); titleSel = +b.dataset.i; renderTitleMenu(); };
     b.onclick = () => { uiClick(); titleItems[+b.dataset.i].act(); };
   });
 }
 
+// Opens a title side panel: load, controls, settings or credits (the crew strip hides behind it).
 function openTitleSub(kind) {
   const el = root.querySelector('#title .sub');
   titleSub = kind;
   el.className = `sub panel ${kind === 'controls' || kind === 'credits' ? 'wide' : kind === 'settings' ? 'mid' : ''}`;
   el.style.display = 'block';
   root.querySelector('#title').classList.add('subopen');
+  // Restart the pop-in animation (reading offsetWidth forces a reflow between the class changes).
   el.classList.remove('anim'); void el.offsetWidth; el.classList.add('anim');
   uiSwoosh(true);
   if (kind === 'controls') el.innerHTML = controlsHTML();
@@ -107,6 +113,7 @@ function closeTitleSub() {
   uiSwoosh(false);
 }
 
+/** Removes whichever menu is showing (with a swoosh when it was the pause menu). */
 export function hideMenus() {
   if (root.firstElementChild?.id === 'pause') uiSwoosh(false);
   root.innerHTML = '';
@@ -121,7 +128,9 @@ function slotLine(s) {
 
 // ---- Pause -----------------------------------------------------------------------------
 const TABS = ['map', 'missions', 'stats', 'save', 'settings', 'controls', 'credits'];
+const MAP_ACTIONS = ['resume', 'save', 'quit'];
 
+/** Opens the pause menu on a tab. */
 export function openPause(tab = 'map') {
   pauseTab = tab;
   pauseSel = 0;
@@ -130,6 +139,7 @@ export function openPause(tab = 'map') {
   renderPause(true);
 }
 
+// Rebuilds the whole pause screen (top bar, current page, footer) and binds its buttons.
 function renderPause(opening = false) {
   const h = Math.floor(sky.hour), mi = Math.floor((sky.hour % 1) * 60);
   root.innerHTML = `<div id="pause" class="outl ${opening ? 'opening' : ''}">
@@ -158,11 +168,12 @@ function doAction(a) {
   if (a === 'quit') actions.quit();
 }
 
+// MAP tab: city map, story checklist, skills, legend and the save-slot card with resume/save/quit.
 function mapHTML() {
   const done = game.missionsDone.length;
-  const nm = ms.def || nextMission();
+  const current = ms.def || nextMission();
   const story = MISSIONS.map((m, i) => {
-    const d = game.missionsDone.includes(m.id), now = nm && nm.id === m.id;
+    const d = game.missionsDone.includes(m.id), now = current && current.id === m.id;
     return `<div class="${d || now ? '' : 'dim'}"><span class="ck ${d ? 'done' : now ? 'now' : ''}">${d ? '&#10003;' : i + 1}</span>${m.title}<em>$${(m.reward / 1000).toFixed(m.reward % 1000 ? 1 : 0)}K</em></div>`;
   }).join('');
   const skills = Object.entries(game.skills).map(([k, v]) => `<div class="skill">${k.toUpperCase()} <span style="float:right;color:#ffe9a8">LV ${1 + Math.floor(v * 9)}</span><div class="bar"><i style="width:${v * 100}%"></i></div></div>`).join('');
@@ -199,6 +210,7 @@ function pauseBody() {
 }
 
 // ---- Keyboard navigation -----------------------------------------------------------------
+/** Routes a key to the open title or pause menu; returns true when a menu took it. */
 export function menuKey(code) {
   if (document.getElementById('title')) {
     if (titleSub) {
@@ -217,7 +229,7 @@ export function menuKey(code) {
     if (code === 'ArrowLeft' || code === 'KeyA' || code === 'KeyQ') setTab(TABS[(i + TABS.length - 1) % TABS.length]);
     if (pauseTab === 'map' && (code === 'ArrowDown' || code === 'KeyS')) { pauseSel = (pauseSel + 1) % 3; blip(); renderPause(); }
     if (pauseTab === 'map' && (code === 'ArrowUp' || code === 'KeyW')) { pauseSel = (pauseSel + 2) % 3; blip(); renderPause(); }
-    if (pauseTab === 'map' && code === 'Enter') { uiClick(); doAction(['resume', 'save', 'quit'][pauseSel]); }
+    if (pauseTab === 'map' && code === 'Enter') { uiClick(); doAction(MAP_ACTIONS[pauseSel]); }
     return true;
   }
   return false;

@@ -1,5 +1,6 @@
 // Mission runner: start markers, stage objectives, timers, enemy squads, rewards, pass/fail, retry and
 // the per-run numbers (time, cash, rep, accuracy, stars evaded) shown on the results card.
+// Mission content (stages, dialogue, rewards) lives in data/missions-data.js.
 import { MISSIONS, HINTS } from '../data/missions-data.js';
 import { WEAPONS } from '../core/config.js';
 import { city, collideCircle, snapToRoad } from '../world/city.js';
@@ -17,9 +18,11 @@ import { CAST } from '../data/cast.js';
 import { repLevel } from './progression.js';
 import { rand } from '../core/rng.js';
 
+// The running mission: its definition, current stage, countdown, squad, target, mission car and run stats.
 export const ms = { def: null, stage: -1, timer: 0, enemies: [], target: null, vehicle: null, goal: null, run: null, armed: true };
 let scene, startMarker, goalMarker, seekT = 0;
 
+/** Creates the yellow start and pink goal markers and the chase-tracking hooks. */
 export function setupMissions(sc) {
   scene = sc;
   startMarker = makeMarker('#ffd23f');
@@ -31,9 +34,12 @@ export function setupMissions(sc) {
   on('lostCops', () => { if (ms.run) { ms.run.evaded += ms.run.peak; ms.run.peak = 0; } });
 }
 
+/** The first story mission not yet passed, or null when the story is complete. */
 export const nextMission = () => MISSIONS.find((m) => !game.missionsDone.includes(m.id)) || null;
+// A landmark key ('diner') resolves to its city landmark; a position object passes through.
 const lm = (key) => (typeof key === 'string' ? city.landmarks[key] : key);
 
+/** Starts a mission (optionally at a later stage): snapshots run stats, banner, first objective. */
 export function startMission(def, stage = 0) {
   dismissResults();
   ms.def = def;
@@ -48,7 +54,7 @@ export function startMission(def, stage = 0) {
   emit('objective');
 }
 
-// ENTER on the failed card (or a play-test): back to the mission's start marker and go again.
+/** ENTER on the failed card (or a play-test): back to the mission's start marker and go again. */
 export function retryMission(def) {
   if (ms.def || game.mode !== 'play') return;
   if (player.vehicle) exitVehicle();
@@ -59,6 +65,7 @@ export function retryMission(def) {
   startMission(def);
 }
 
+// Sets up stage i: its timer, target, dialogue, wanted level, mission car or enemy squad.
 function enterStage(i) {
   ms.stage = i;
   const st = ms.def.stages[i];
@@ -82,6 +89,7 @@ function enterStage(i) {
 
 const findModel = (model, range) => nearestVehicle(player.x, player.z, range, (v) => v.model === model && !v.wrecked && v.driver !== 'player');
 
+// A ring of st.count gang members around the stage target, plus the boss if the stage names one.
 function spawnSquad(st) {
   const p = lm(st.at);
   ms.enemies = [];
@@ -93,8 +101,8 @@ function spawnSquad(st) {
   }
   if (st.boss) {
     const q = collideCircle(p.x + 3, p.z + 3, 0.6);
-    const c = CAST[st.boss];
-    ms.enemies.push(spawnShooter(q.x, q.z, st.gang, { boss: true, name: c.name, tag: 'mission', look: { skin: c.skin, shirt: c.shirt, hair: c.hair, shades: true } }));
+    const boss = CAST[st.boss];
+    ms.enemies.push(spawnShooter(q.x, q.z, st.gang, { boss: true, name: boss.name, tag: 'mission', look: { skin: boss.skin, shirt: boss.shirt, hair: boss.hair, shades: true } }));
   }
 }
 
@@ -111,6 +119,7 @@ function stageDone() {
 
 const medalFor = (time, par) => (time <= par ? 'GOLD' : time <= par * 1.5 ? 'SILVER' : 'BRONZE');
 
+// Pays out (reward + gold bonus), unlocks weapons/ammo/armor, records the best run and shows the results card.
 function passMission() {
   const def = ms.def, run = ms.run;
   game.missionsDone.push(def.id);
@@ -149,6 +158,7 @@ function passMission() {
   showPassed(result);
 }
 
+/** Fails the running mission with a reason; anything but QUIT shows the failed card with a retry. */
 export function failMission(reason) {
   if (!ms.def) return;
   const def = ms.def, stage = ms.stage, time = ms.run?.time || 0;
@@ -160,6 +170,7 @@ export function failMission(reason) {
   if (reason !== 'QUIT') showFailed(ms.last, retryMission);
 }
 
+// Clears mission state: dead squad members go, survivors become ordinary shooters, the car is released.
 function endMission() {
   clearShooters((s) => s.tag === 'mission' && !s.alive);
   for (const s of shooters) if (s.tag === 'mission') s.tag = null;
@@ -171,19 +182,20 @@ function endMission() {
 
 function near(p, r) { return p && Math.hypot(player.x - p.x, player.z - p.z) < r; }
 
+/** Per-frame: shows the next start marker when idle, otherwise runs the current stage's check. */
 export function updateMissions(dt, t) {
   const def = ms.def;
   if (!def) {
-    const nm = nextMission();
+    const upcoming = nextMission();
     goalMarker.visible = false;
-    if (nm && game.mode === 'play') {
-      const p = lm(nm.start);
+    if (upcoming && game.mode === 'play') {
+      const p = lm(upcoming.start);
       startMarker.visible = true;
       startMarker.position.set(p.x, 0, p.z);
       // Story jobs wait while a side activity (race, fare, parcel run) or a results card is up, and a
       // marker only arms once the player has stepped off it (a job can end on the next one's start).
       if (!near(p, 6)) ms.armed = true;
-      if (ms.armed && near(p, 3.5) && (!player.vehicle || player.vehicle.speed < 8) && !game.sideBusy && !resultsOpen()) startMission(nm);
+      if (ms.armed && near(p, 3.5) && (!player.vehicle || player.vehicle.speed < 8) && !game.sideBusy && !resultsOpen()) startMission(upcoming);
     } else startMarker.visible = false;
     animateMarker(startMarker, t);
     return;
@@ -211,6 +223,7 @@ export function updateMissions(dt, t) {
     case 'steal': {
       if (ms.vehicle && !ms.vehicle.wrecked) goal = ms.vehicle;
       else if (st.model) {
+        // Re-target the nearest matching car twice a second.
         seekT -= dt;
         if (seekT <= 0 || !ms.seek || ms.seek.wrecked) { ms.seek = findModel(st.model, 400); seekT = 0.5; }
         goal = ms.seek;
@@ -245,15 +258,15 @@ function animateMarker(m, t) {
   if (m.userData.pool) m.userData.pool.scale.setScalar(1 + 0.12 * Math.sin(t * 3));
 }
 
-// What the HUD mission panel shows.
+/** What the HUD mission panel shows: chapter, title, objective text, next step, hint, counters. */
 export function objectiveInfo() {
   const def = ms.def;
   if (!def) {
-    const nm = nextMission();
-    if (!nm) return { chapter: 0, title: 'THE BAY IS YOURS', text: 'Free roam - all 9 story missions complete', idle: true, hint: 'Steal, race and raise hell - the city is open' };
+    const upcoming = nextMission();
+    if (!upcoming) return { chapter: 0, title: 'THE BAY IS YOURS', text: 'Free roam - all 9 story missions complete', idle: true, hint: 'Steal, race and raise hell - the city is open' };
     return {
-      chapter: nm.chapter, title: nm.title, text: `Go to ${lm(nm.start).name} to start`, idle: true,
-      next: `${CAST[nm.giver].name.split(' ')[0]} has the job  ·  pays $${nm.reward.toLocaleString('en-US')}`, hint: 'Follow the yellow marker on the minimap',
+      chapter: upcoming.chapter, title: upcoming.title, text: `Go to ${lm(upcoming.start).name} to start`, idle: true,
+      next: `${CAST[upcoming.giver].name.split(' ')[0]} has the job  ·  pays $${upcoming.reward.toLocaleString('en-US')}`, hint: 'Follow the yellow marker on the minimap',
     };
   }
   const st = def.stages[ms.stage];
@@ -272,4 +285,5 @@ export function objectiveInfo() {
   return info;
 }
 
+/** Where the GPS should point: the current stage goal, or the next mission's start marker. */
 export function missionGoal() { return ms.def ? ms.goal : (nextMission() ? lm(nextMission().start) : null); }

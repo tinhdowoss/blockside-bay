@@ -16,13 +16,17 @@ import { rand } from '../core/rng.js';
 
 const THREE = window.THREE;
 let camera, fireCooldown = 0, reloadT = 0, bloom = 0;
+// Scratch vectors for the shot ray (origin, direction).
+const _o = new THREE.Vector3(), _d = new THREE.Vector3();
 
+/** Hands the module the camera that shots are fired along. */
 export function setupWeapons(cam) { camera = cam; }
+/** The WEAPONS entry in hand. */
 export const currentWeapon = () => WEAPONS[game.weapon];
 export const isReloading = () => reloadT > 0;
-// Current extra spread from recoil (0 when settled); the HUD crosshair opens with it.
+/** Current extra spread from recoil (0 when settled); the HUD crosshair opens with it. */
 export const aimBloom = () => bloom;
-// The crosshair ray (camera position + direction), as plain numbers.
+/** The crosshair ray (camera position + direction), as plain numbers. */
 export function aimRay() {
   camera.getWorldDirection(_d);
   return { o: { x: camera.position.x, y: camera.position.y, z: camera.position.z }, d: { x: _d.x, y: _d.y, z: _d.z } };
@@ -34,6 +38,7 @@ function select(i) {
   emit('weapon', WEAPONS[i]);
 }
 
+/** Steps to the next (dir 1) or previous (dir -1) unlocked weapon. */
 export function cycleWeapon(dir = 1) {
   let i = game.weapon;
   for (let k = 0; k < WEAPONS.length; k++) {
@@ -43,6 +48,7 @@ export function cycleWeapon(dir = 1) {
   select(i);
 }
 
+/** Refills the clip from reserve ammo (10 % faster crouched); does nothing if full, empty or already reloading. */
 export function reload() {
   const w = currentWeapon();
   if (!w.clip || reloadT > 0) return;
@@ -54,17 +60,19 @@ export function reload() {
   emit('reload', w);
 }
 
+/** World position of the gun muzzle in Kai's right hand. */
 export function muzzlePos() {
   const s = Math.sin(player.yaw), c = Math.cos(player.yaw);
   return new THREE.Vector3(player.x + s * 0.9 - c * 0.42, player.crouch ? 1.15 : 1.55, player.z + c * 0.9 + s * 0.42);
 }
 
-const _o = new THREE.Vector3(), _d = new THREE.Vector3();
+/** One trigger pull: a punch with fists, otherwise a shot (or pellet burst) with flash, recoil and crime check. */
 export function playerFire() {
   const w = currentWeapon();
   if (w.id === 'fists') {
     player.punch = 1;
     emit('punch');
+    // The first character in reach and roughly in front takes the punch.
     for (const c of [...shooters.filter((s) => s.alive), ...peds.filter((p) => p.state !== 'dead')]) {
       const dx = c.x - player.x, dz = c.z - player.z, d = Math.hypot(dx, dz);
       const facing = (dx * Math.sin(player.yaw) + dz * Math.cos(player.yaw)) / (d || 1);
@@ -130,10 +138,12 @@ function fireRay(w, muzzle) {
   return false;
 }
 
+// Any police car or living foot cop within r metres.
 function copsNear(r) {
   return vehicles.some((v) => v.police && Math.hypot(v.x - player.x, v.z - player.z) < r) || shooters.some((s) => s.alive && s.faction === 'police' && Math.hypot(s.x - player.x, s.z - player.z) < r);
 }
 
+/** Per-frame: cooldowns, recoil settle, weapon switching keys, reload (manual and automatic) and the trigger. */
 export function updateWeapons(dt) {
   fireCooldown -= dt;
   bloom *= Math.exp(-dt * (player.crouch ? 7 : 4.5));
