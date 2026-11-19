@@ -1,5 +1,6 @@
 /* BLOCKSIDE BAY: in-play HUD styles (mission panel, cash/stars/weapons, police response, minimap, speedo,
-   radio, crosshair, side-activity panels, dialogue box, results card). Chunky, outlined, readable when shrunk. */
+   radio, crosshair, side-activity panels, dialogue box, results card). Chunky, outlined and still readable
+   when the window is small. Markup is built by game/src/ui/hud.js. */
 :root {
   --ink: #12061c;
   --pink: #ff4fa3;

@@ -1,6 +1,6 @@
 // Mission runner: start markers, stage objectives, timers, enemy squads, rewards, pass/fail, retry and
 // the per-run numbers (time, cash, rep, accuracy, stars evaded) shown on the results card.
-// Mission content (stages, dialogue, rewards) lives in data/missions-data.js.
+// Mission content (stages, dialogue, rewards) lives in data/missions-data.js; this file only runs it.
 import { MISSIONS, HINTS } from '../data/missions-data.js';
 import { WEAPONS } from '../core/config.js';
 import { city, collideCircle, snapToRoad } from '../world/city.js';
@@ -87,6 +87,7 @@ function enterStage(i) {
   if (st.type === 'eliminate') spawnSquad(st);
 }
 
+// Nearest intact car of the given model within range that the player is not already driving.
 const findModel = (model, range) => nearestVehicle(player.x, player.z, range, (v) => v.model === model && !v.wrecked && v.driver !== 'player');
 
 // A ring of st.count gang members around the stage target, plus the boss if the stage names one.

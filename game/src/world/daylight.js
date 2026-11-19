@@ -1,6 +1,6 @@
 // Sky dome (three-band gradient, sun disc with corona, horizon glow towards the sun, moon), stars,
 // sun/moon light with soft shadows that follow the player, hemisphere light, distance haze and the
-// day/night cycle (0..24 hours, a full day takes 15 minutes).
+// day/night cycle (0..24 hours; a full day takes 15 real minutes).
 import { city } from './city.js';
 import { makeRng } from '../core/rng.js';
 
@@ -148,8 +148,8 @@ export function updateSky(dt, focus, scene) {
   sky.hemi.intensity = k.hemiI;
   sky.hemi.color.copy(k.horizon).lerp(WHITE, 0.5);
   // Shadow camera follows the player, snapped to whole shadow-map texels so edges do not shimmer.
-  const texel = 170 / 2048;
-  const fx = Math.round(focus.x / texel) * texel, fz = Math.round(focus.z / texel) * texel;
+  const texelSize = 170 / 2048;
+  const fx = Math.round(focus.x / texelSize) * texelSize, fz = Math.round(focus.z / texelSize) * texelSize;
   sky.sun.position.set(fx + sunDir.x * 200, sunDir.y * 200, fz + sunDir.z * 200);
   sky.sun.target.position.set(fx, 0, fz);
   sky.dome.position.set(focus.x, 0, focus.z);

@@ -1,7 +1,7 @@
 // Skid marks: dark rubber strips laid on the asphalt under sliding or hard-braking tyres. A ring buffer of
-// flat quads in one instanced draw; when the buffer is full the oldest mark is overwritten.
+// flat quads drawn in one instanced call; once the buffer is full the oldest mark is overwritten.
 const THREE = window.THREE;
-const MAX = 1400;
+const MAX = 1400;           // ring buffer size (strips kept on the road at once)
 let geo, segs, alphas, head = 0, count = 0;
 
 const VS = `attribute vec4 aSeg; attribute float aA; varying float vA; varying vec2 vUv;
@@ -56,10 +56,10 @@ export function addSkid(x0, z0, x1, z1, strength = 1) {
 export function skidCar(v, strength) {
   const fwdX = Math.sin(v.heading), fwdZ = Math.cos(v.heading);
   const back = v.spec.len * 0.32, side = v.spec.wid * 0.38;
-  const wheels = [
+  const rearWheels = [
     [v.x - fwdX * back - fwdZ * side, v.z - fwdZ * back + fwdX * side],
     [v.x - fwdX * back + fwdZ * side, v.z - fwdZ * back - fwdX * side],
   ];
-  if (strength > 0 && v.skidPrev) wheels.forEach((w, i) => addSkid(v.skidPrev[i][0], v.skidPrev[i][1], w[0], w[1], strength));
-  v.skidPrev = strength > 0 ? wheels : null;
+  if (strength > 0 && v.skidPrev) rearWheels.forEach((w, i) => addSkid(v.skidPrev[i][0], v.skidPrev[i][1], w[0], w[1], strength));
+  v.skidPrev = strength > 0 ? rearWheels : null;
 }
