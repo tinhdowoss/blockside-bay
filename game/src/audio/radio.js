@@ -16,6 +16,7 @@ import { sky } from '../world/daylight.js';
 
 export const { blip, uiClick, uiHover, uiSwoosh, uiTick, jingle, checkpointSfx, coin, gunshot } = S;
 
+/** Starts audio on the first user gesture (or resumes a suspended context) and the music scheduler. */
 export function initAudio() {
   if (mix.ac) { if (mix.ac.state === 'suspended') mix.ac.resume(); return; }
   if (!createMixer()) return;
@@ -24,7 +25,7 @@ export function initAudio() {
   setInterval(() => scheduleMusic(radio.on && game.mode !== 'pause'), 50);
 }
 
-// Music / effects bus levels plus the master output level (Settings: MASTER, MUSIC, EFFECTS).
+/** Music / effects bus levels plus the master output level (Settings: MASTER, MUSIC, EFFECTS). */
 export function setVolume(music, sfx, master = game.masterVol ?? 1) {
   setMusicVolume(music ?? 0.32);
   if (!mix.ac) return;
@@ -33,32 +34,37 @@ export function setVolume(music, sfx, master = game.masterVol ?? 1) {
   setBus(mix.out, 0.85 * master);
 }
 
+/** Tunes the radio and remembers the station in the run state. */
 export function setStation(i) { setStationMusic(i); game.radioStation = radio.station; }
+/** Next station (the R key): the current car remembers it. */
 export function nextStation() {
   setStation(radio.station + 1);
   if (player.vehicle) player.vehicle.radioStation = radio.station;
   S.blip(880);
 }
-export function setRadioPlaying(on_) { radio.on = on_; }
+export function setRadioPlaying(playing) { radio.on = playing; }
 
-let lastT = 0;
-// Called every rendered frame with the camera (listener position and facing).
+let elapsed = 0;
+/** Called every rendered frame with the camera (listener position and facing). */
 export function updateAudio(dt, camera) {
   if (!mix.ac) return;
   const yaw = camera ? Math.atan2(-camera.matrixWorld.elements[8], -camera.matrixWorld.elements[10]) : player.camYaw;
   S.setListener(camera ? camera.position.x : player.x, camera ? camera.position.z : player.z, yaw, dt);
   const playing = game.mode === 'play';
-  let siren = null, sd = 1e9;
-  for (const v of vehicles) if (v.siren) { const d = Math.hypot(v.x - S.listener.x, v.z - S.listener.z); if (d < sd) { sd = d; siren = v; } }
+  // Only the nearest siren gets a voice.
+  let siren = null, sirenDist = 1e9;
+  for (const v of vehicles) if (v.siren) { const d = Math.hypot(v.x - S.listener.x, v.z - S.listener.z); if (d < sirenDist) { sirenDist = d; siren = v; } }
   S.updateVoices(dt, player.vehicle, siren, playing);
-  lastT += dt;
-  updateAmbience(dt, lastT, sky.night, playing || game.mode === 'down');
+  elapsed += dt;
+  updateAmbience(dt, elapsed, sky.night, playing || game.mode === 'down');
 }
 
+/** The current station's table entry plus its live equaliser levels, for the HUD. */
 export function radioInfo(t = performance.now() / 1000) {
   return { ...STATIONS[radio.station], levels: musicLevels(t) };
 }
 
+/** Hooks every game event that makes a sound. */
 export function setupAudioEvents() {
   on('gunshot', (e) => S.gunshot(e.weapon, e.x, e.z, e.by === 'player'));
   on('punch', S.punch);

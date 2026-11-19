@@ -1,4 +1,6 @@
-// BLOCKSIDE BAY — tuning constants and static tables shared by every system.
+// BLOCKSIDE BAY: tuning constants and static tables shared by every system (city grid, districts,
+// facade palettes, vehicle models, weapons, rep levels, police call signs, wanted rules, radio stations,
+// save keys). Data only: nothing here runs or changes at play time.
 
 export const GAME_TITLE = 'BLOCKSIDE BAY';
 
@@ -52,6 +54,7 @@ export const CAR_MODELS = {
   // Water only: drifts wide, bobs on the swell, throws spray. Found at the marina and off Seaglass Beach.
   skiff: { name: 'BAY SKIFF', len: 5.2, wid: 2.0, hgt: 1.2, top: 36, accel: 13, grip: 1.6, steer: 0.7, mass: 1.2, station: 0, colors: ['#ff4fa3', '#2ee6c8', '#ffd23f'], boat: true },
 };
+// Weighted pick list for civilian traffic (repeats make a model more common).
 export const TRAFFIC_MODELS = ['cruza', 'cruza', 'palomar', 'bayrunner', 'vista', 'cruza', 'vista', 'bruiser', 'zippa', 'cruza', 'zippa'];
 
 // Player weapons, one per number key. kick = camera recoil (radians), bloom = spread added per shot
@@ -73,10 +76,12 @@ export const REP_TITLES = ['FRESH OUT', 'CORNER RAT', 'WHEEL HAND', 'BAY HUSTLER
 export const CALL_SIGNS = ['CORAL', 'MARLIN', 'PELICAN', 'TARPON', 'HERON', 'SNAPPER', 'IBIS', 'GROUPER'];
 export const HELI_SIGN = 'SKYEYE 9';
 
+// On-foot movement speeds (u/s), collision radius and stat caps.
 export const PLAYER = {
   walk: 5.2, sprint: 9.5, radius: 0.5, maxHealth: 100, maxArmor: 100,
 };
 
+// Wanted level rules; arrays are indexed by star count (0..5).
 export const WANTED = {
   max: 5,
   evadeTime: [0, 6, 8, 10, 13, 16],   // seconds out of sight to drop a star
@@ -87,7 +92,7 @@ export const WANTED = {
 
 export const HEADSHOT_BONUS = 150;
 
-// Radio stations, all procedural.
+// Radio stations, all procedural (audio/music.js turns each into an arrangement).
 export const STATIONS = [
   { id: 'wave', name: 'WAVE 88.1', tag: 'Synth sunsets', color: '#ff5fa2', bpm: 104, root: 45, scale: [0, 3, 5, 7, 10], style: 'synth' },
   { id: 'reef', name: 'REEF RADIO 102', tag: 'Bay bass & palms', color: '#2ee6c8', bpm: 122, root: 41, scale: [0, 2, 4, 7, 9], style: 'house' },
@@ -96,5 +101,6 @@ export const STATIONS = [
   { id: 'off', name: 'RADIO OFF', tag: '', color: '#8a8a8a', style: 'off' },
 ];
 
+// localStorage key prefix (slot index appended) and the number of save slots.
 export const SAVE_KEY = 'blockside-bay-save-';
 export const SAVE_SLOTS = 3;

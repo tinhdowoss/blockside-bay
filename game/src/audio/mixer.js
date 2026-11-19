@@ -13,6 +13,7 @@ export const mix = {
 // a smoothed copy. Stereo channels use independent noise for width.
 function impulse(ac, seconds, decay) {
   const n = Math.floor(ac.sampleRate * seconds);
+  const fadeIn = ac.sampleRate * 0.012;   // 12 ms ramp so the reverb never clicks in
   const buf = ac.createBuffer(2, n, ac.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch);
@@ -21,12 +22,13 @@ function impulse(ac, seconds, decay) {
       const t = i / n;
       const w = Math.random() * 2 - 1;
       lp += (w - lp) * (0.5 - t * 0.42);
-      d[i] = lp * Math.pow(1 - t, decay) * (i < ac.sampleRate * 0.012 ? i / (ac.sampleRate * 0.012) : 1);
+      d[i] = lp * Math.pow(1 - t, decay) * (i < fadeIn ? i / fadeIn : 1);
     }
   }
   return buf;
 }
 
+// tanh wave shaper normalised so full scale stays full scale: rounds off peaks the limiter lets through.
 function softClip(ac) {
   const ws = ac.createWaveShaper();
   const curve = new Float32Array(1024);
@@ -36,6 +38,7 @@ function softClip(ac) {
   return ws;
 }
 
+/** Builds the AudioContext graph once (later calls return the same mix); null without WebAudio. */
 export function createMixer() {
   if (mix.ac) return mix;
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -59,20 +62,20 @@ export function createMixer() {
   const revHp = ac.createBiquadFilter(); revHp.type = 'highpass'; revHp.frequency.value = 180;
   revIn.connect(revHp); revHp.connect(conv); conv.connect(revOut); revOut.connect(glue);
   mix.reverb = revIn;
-  const dIn = ac.createGain();
-  const dl = ac.createDelay(1.5); dl.delayTime.value = 0.31;
-  const fb = ac.createGain(); fb.gain.value = 0.34;
-  const dlp = ac.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 2400;
-  const dOut = ac.createGain(); dOut.gain.value = 0.4;
-  dIn.connect(dl); dl.connect(dlp); dlp.connect(fb); fb.connect(dl); dlp.connect(dOut); dOut.connect(glue);
-  dOut.connect(revIn);
-  mix.delay = dIn;
+  const delayIn = ac.createGain();
+  const delayLine = ac.createDelay(1.5); delayLine.delayTime.value = 0.31;
+  const feedback = ac.createGain(); feedback.gain.value = 0.34;
+  const delayLp = ac.createBiquadFilter(); delayLp.type = 'lowpass'; delayLp.frequency.value = 2400;
+  const delayOut = ac.createGain(); delayOut.gain.value = 0.4;
+  delayIn.connect(delayLine); delayLine.connect(delayLp); delayLp.connect(feedback); feedback.connect(delayLine); delayLp.connect(delayOut); delayOut.connect(glue);
+  delayOut.connect(revIn);
+  mix.delay = delayIn;
   // Buses. Each has its own send taps (bus.rev / bus.dly) whose level follows the bus volume, so the
   // music and effects sliders also scale their reverb and echo tails.
   const bus = (v) => {
     const g = ac.createGain(); g.gain.value = v; g.connect(glue);
     g.rev = ac.createGain(); g.rev.gain.value = v; g.rev.connect(revIn);
-    g.dly = ac.createGain(); g.dly.gain.value = v; g.dly.connect(dIn);
+    g.dly = ac.createGain(); g.dly.gain.value = v; g.dly.connect(delayIn);
     return g;
   };
   mix.music = bus(0.32); mix.sfx = bus(0.8); mix.amb = bus(0.8); mix.ui = bus(0.8);
@@ -80,20 +83,20 @@ export function createMixer() {
   mix.music.connect(mix.analyser);
   // Noise sources: white and a pink-ish (filtered) one for surf and hum.
   mix.noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
-  const w = mix.noiseBuf.getChannelData(0);
-  for (let i = 0; i < w.length; i++) w[i] = Math.random() * 2 - 1;
+  const white = mix.noiseBuf.getChannelData(0);
+  for (let i = 0; i < white.length; i++) white[i] = Math.random() * 2 - 1;
   mix.pinkBuf = ac.createBuffer(1, ac.sampleRate * 4, ac.sampleRate);
-  const p = mix.pinkBuf.getChannelData(0);
+  const pink = mix.pinkBuf.getChannelData(0);
   let b0 = 0, b1 = 0, b2 = 0;
-  for (let i = 0; i < p.length; i++) {
+  for (let i = 0; i < pink.length; i++) {
     const x = Math.random() * 2 - 1;
     b0 = 0.997 * b0 + x * 0.029; b1 = 0.985 * b1 + x * 0.032; b2 = 0.95 * b2 + x * 0.048;
-    p[i] = (b0 + b1 + b2 + x * 0.02) * 2.2;
+    pink[i] = (b0 + b1 + b2 + x * 0.02) * 2.2;
   }
   return mix;
 }
 
-// Route a node to a bus with optional sends and stereo pan. Returns the gain node you drive.
+/** Routes a node to a bus with optional sends and stereo pan. Returns the gain node you drive. */
 export function route(node, { bus = mix.sfx, rev = 0, dly = 0, pan = 0 } = {}) {
   const ac = mix.ac;
   let tail = node;
@@ -104,7 +107,7 @@ export function route(node, { bus = mix.sfx, rev = 0, dly = 0, pan = 0 } = {}) {
   return tail;
 }
 
-// Smoothly set a bus level (and its send taps).
+/** Smoothly sets a bus level (and its send taps). */
 export function setBus(bus, v, tc = 0.08) {
   if (!bus) return;
   const t = mix.ac.currentTime;
@@ -113,7 +116,7 @@ export function setBus(bus, v, tc = 0.08) {
   bus.dly?.gain.setTargetAtTime(v, t, tc);
 }
 
-// One-shot oscillator note with an attack/decay envelope.
+/** One-shot oscillator note with an attack/decay envelope (options: glide, detune, filter, hold, sends). */
 export function tone(type, freq, t, dur, vol, o = {}) {
   const ac = mix.ac;
   const osc = ac.createOscillator(), g = ac.createGain();
@@ -137,7 +140,7 @@ export function tone(type, freq, t, dur, vol, o = {}) {
   return osc;
 }
 
-// One-shot filtered noise burst.
+/** One-shot filtered noise burst (white, or pink with o.pink). */
 export function noise(t, dur, vol, freq, o = {}) {
   const ac = mix.ac;
   const s = ac.createBufferSource(); s.buffer = o.pink ? mix.pinkBuf : mix.noiseBuf;
@@ -154,4 +157,5 @@ export function noise(t, dur, vol, freq, o = {}) {
   s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
 }
 
+/** MIDI note number to frequency in Hz (A4 = 69 = 440 Hz). */
 export const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);

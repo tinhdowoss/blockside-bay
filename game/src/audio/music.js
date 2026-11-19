@@ -12,7 +12,9 @@ import { STATIONS } from '../core/config.js';
 import { makeRng } from '../core/rng.js';
 import { mix, tone, noise, midi } from './mixer.js';
 
+// Chord qualities as semitone offsets from the chord root.
 const Q = { M: [0, 4, 7], m: [0, 3, 7], M7: [0, 4, 7, 11], m7: [0, 3, 7, 10], m9: [0, 3, 7, 10, 14], 9: [0, 4, 7, 10, 14], M9: [0, 4, 7, 11, 14], sus: [0, 5, 7] };
+// One chord per bar per style: [semitones above the station root, quality].
 const PROG = {
   synth: [[0, 'm'], [8, 'M'], [3, 'M'], [10, 'M'], [0, 'm'], [5, 'm'], [8, 'M'], [10, 'sus']],
   house: [[0, 'M7'], [4, 'm7'], [9, 'm7'], [5, 'M7']],
@@ -42,10 +44,11 @@ const rim = (t, v = 0.15) => tone('square', 1700, t, 0.03, v, { ...M(), filter: 
 const crackle = (t) => { if (Math.random() < 0.45) noise(t + Math.random() * 0.1, 0.006, 0.05 + Math.random() * 0.08, 2500, M()); };
 
 // ---- arrangement -----------------------------------------------------------------------------------
+// The chord for a bar: its root note and every chord tone as MIDI numbers.
 function chordAt(st, bar) {
-  const p = PROG[st.style];
-  const [off, q] = p[bar % p.length];
-  return { root: st.root + off, notes: Q[q].map((n) => st.root + off + n) };
+  const prog = PROG[st.style];
+  const [off, quality] = prog[bar % prog.length];
+  return { root: st.root + off, notes: Q[quality].map((n) => st.root + off + n) };
 }
 
 // A melody for one 4-bar phrase: chord tones on strong beats, scale steps between, rests for breath.
@@ -63,11 +66,13 @@ function phrase(st, r, density) {
   return line;
 }
 
+// Two lead phrases (A for early sections, B for later ones) and a bass variation, seeded per station.
 function arrange(st) {
   const r = makeRng(st.root * 131 + st.bpm * 7);
   return { leads: [phrase(st, r, st.style === 'synth' ? 0.5 : 0.38), phrase(st, r, st.style === 'synth' ? 0.42 : 0.3)], bassVar: r() };
 }
 
+/** Tunes to station i (wraps around) and restarts its arrangement from the top. */
 export function setStationMusic(i) {
   radio.station = (i + STATIONS.length) % STATIONS.length;
   const st = STATIONS[radio.station];
@@ -109,7 +114,9 @@ function playStep(st, t, step, spb) {
       if (i === 0 || i === 8) kick(t, 0.6, 50);
       if (i % 4 === 2) guiro(t);
       if (i % 2 === 0) shaker(t);
-      if (i === 6 || i === 14) conga(t, 330); if (i === 7 || i === 15) conga(t, 250, 0.2); if (i === 11) conga(t, 200, 0.22);
+      if (i === 6 || i === 14) conga(t, 330);
+      if (i === 7 || i === 15) conga(t, 250, 0.2);
+      if (i === 11) conga(t, 200, 0.22);
       if (i === 4 || i === 12) rim(t);
     }
     // Bouncing cumbia bass: root on 1, fifth on 3, pickup before the bar.
@@ -138,8 +145,10 @@ function playStep(st, t, step, spb) {
 }
 
 let musicVol = 0.32;
+/** Music slider level the radio fades up to while playing. */
 export function setMusicVolume(v) { musicVol = v; }
 
+/** Look-ahead scheduler (called every 50 ms): fades the music bus and queues steps 0.2 s ahead. */
 export function scheduleMusic(playing) {
   const ac = mix.ac;
   if (!ac) return;
@@ -149,22 +158,23 @@ export function scheduleMusic(playing) {
   mix.music.rev.gain.setTargetAtTime(want, ac.currentTime, 0.25);
   mix.music.dly.gain.setTargetAtTime(want, ac.currentTime, 0.25);
   if (!radio.arr) { radio.next = ac.currentTime + 0.05; return; }
-  const spb = 60 / st.bpm / 4;
+  const secondsPerStep = 60 / st.bpm / 4;
   if (radio.next < ac.currentTime - 0.5) radio.next = ac.currentTime + 0.05;
   while (radio.next < ac.currentTime + 0.2) {
-    if (playing) playStep(st, radio.next, radio.step, spb);
-    radio.next += spb;
+    if (playing) playStep(st, radio.next, radio.step, secondsPerStep);
+    radio.next += secondsPerStep;
     radio.step++;
   }
 }
 
+/** Seven 0..1 equaliser bar heights for the HUD radio (from the analyser, or a fake wobble when off). */
 export function musicLevels(t) {
   const st = STATIONS[radio.station];
   const L = radio.levels;
   if (mix.analyser && radio.on) {
-    const a = new Uint8Array(mix.analyser.frequencyBinCount);
-    mix.analyser.getByteFrequencyData(a);
-    for (let i = 0; i < 7; i++) L[i] = L[i] * 0.6 + (a[1 + i * 3] / 255) * 0.4;
+    const bins = new Uint8Array(mix.analyser.frequencyBinCount);
+    mix.analyser.getByteFrequencyData(bins);
+    for (let i = 0; i < 7; i++) L[i] = L[i] * 0.6 + (bins[1 + i * 3] / 255) * 0.4;
   } else {
     for (let i = 0; i < 7; i++) L[i] = st.style === 'off' ? 0.05 : 0.35 + 0.35 * Math.abs(Math.sin(t * (2 + i * 0.7) + i));
   }

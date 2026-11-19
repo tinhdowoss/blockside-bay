@@ -33,6 +33,9 @@ import { normalizeSide } from '../data/activities-data.js';
 
 export const SAVE_VERSION = 2;
 
+// Tips a pre-tutorial save is treated as having seen already (experienced players get no tips).
+const ALL_TIPS = ['move', 'marker', 'gps', 'steal', 'drive', 'wanted', 'fight', 'map'];
+
 // ---- storage (never throws) ----------------------------------------------------------------
 
 function store() {
@@ -57,8 +60,8 @@ const validSlot = (slot) => Number.isInteger(slot) && slot >= 0 && slot < SAVE_S
 
 // Chapter + title of the next story mission, shown on CONTINUE and the save cards.
 function chapterFor(missionsDone) {
-  const m = MISSIONS.find((q) => !missionsDone.includes(q.id));
-  return m ? `CH ${m.chapter} ${m.title}` : 'STORY COMPLETE';
+  const next = MISSIONS.find((q) => !missionsDone.includes(q.id));
+  return next ? `CH ${next.chapter} ${next.title}` : 'STORY COMPLETE';
 }
 
 const num = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
@@ -99,6 +102,7 @@ function migrate(raw) {
 
 // ---- public API ----------------------------------------------------------------------------
 
+/** Writes the current run into a slot (default: the active one) and returns the record. */
 export function saveGame(slot = game.slot) {
   if (!validSlot(slot)) slot = 0;
   const data = {
@@ -117,7 +121,7 @@ export function saveGame(slot = game.slot) {
   return data;
 }
 
-// Parsed + migrated record for a slot, or null if the slot is empty/unreadable.
+/** Parsed + migrated record for a slot, or null if the slot is empty/unreadable. */
 export function readSlot(slot) {
   if (!validSlot(slot)) return null;
   const text = storageGet(SAVE_KEY + slot);
@@ -125,17 +129,19 @@ export function readSlot(slot) {
   try { return migrate(JSON.parse(text)); } catch { return null; }
 }
 
+/** Every slot with its record (data is null for empty slots). */
 export function listSlots() {
   return Array.from({ length: SAVE_SLOTS }, (_, i) => ({ slot: i, data: readSlot(i) }));
 }
 
+/** The most recently saved non-empty slot, or null. */
 export function latestSlot() {
   let best = null;
   for (const s of listSlots()) if (s.data && (!best || s.data.savedAt > best.data.savedAt)) best = s;
   return best;
 }
 
-// Applies a slot to the game state; returns the saved position or null.
+/** Applies a slot to the game state; returns the saved position or null. */
 export function loadGame(slot) {
   const d = readSlot(slot);
   if (!d) return null;
@@ -146,18 +152,19 @@ export function loadGame(slot) {
     weapon: d.weapon || 0, missionsDone: [...d.missionsDone], stats: { ...game.stats, ...d.stats }, skills: { ...game.skills, ...d.skills },
     radioStation: d.radioStation || 0, slot, side: normalizeSide(d.side), missionBest: { ...obj(d.missionBest) },
     // Saves from before the tutorial count as experienced players: no tips.
-    tipsSeen: Array.isArray(d.tipsSeen) ? d.tipsSeen.filter((s) => typeof s === 'string') : ['move', 'marker', 'gps', 'steal', 'drive', 'wanted', 'fight', 'map'],
+    tipsSeen: Array.isArray(d.tipsSeen) ? d.tipsSeen.filter((s) => typeof s === 'string') : [...ALL_TIPS],
   });
   if (!game.stats.playSeconds && d.playSeconds) game.stats.playSeconds = d.playSeconds;
   sky.hour = num(d.hour, 11);
   // A save without a usable position (corrupt or hand-edited) restarts outside the safehouse.
   if (!Number.isFinite(d.x) || !Number.isFinite(d.z)) {
-    const s = city.landmarks?.safehouse;
-    return s ? { x: s.x - 7, z: s.z } : { x: 0, z: 0 };
+    const safehouse = city.landmarks?.safehouse;
+    return safehouse ? { x: safehouse.x - 7, z: safehouse.z } : { x: 0, z: 0 };
   }
   return { x: d.x, z: d.z };
 }
 
+/** Empties a slot. */
 export function deleteSlot(slot) {
   if (validSlot(slot)) storageRemove(SAVE_KEY + slot);
 }

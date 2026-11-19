@@ -1,4 +1,6 @@
 // Keyboard + mouse input with pointer lock; keys are tracked by KeyboardEvent.code.
+// Listeners fill `input` as events arrive; systems poll it each frame and endFrame() clears the
+// per-frame parts (taps, mouse deltas, wheel).
 
 export const input = {
   down: new Set(),
@@ -12,6 +14,7 @@ export const input = {
   lastMouseMove: -10,
 };
 
+/** Installs the window/canvas listeners; onKey(code) is called on every keydown. */
 export function setupInput(canvas, onKey) {
   addEventListener('keydown', (e) => {
     if (e.code === 'Tab') e.preventDefault();
@@ -38,9 +41,12 @@ export function setupInput(canvas, onKey) {
   document.addEventListener('pointerlockchange', () => { input.locked = document.pointerLockElement === canvas; });
 }
 
+/** True while the key is held. */
 export const key = (code) => input.down.has(code);
+/** True only on the frame the key went down. */
 export const tapped = (code) => input.pressed.has(code);
 
+/** Clears the per-frame input (call once at the end of every frame). */
 export function endFrame() {
   input.pressed.clear();
   input.mouseDX = 0;

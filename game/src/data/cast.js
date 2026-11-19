@@ -1,4 +1,5 @@
-// The people of BLOCKSIDE BAY and their 16x16 pixel portraits.
+// The people of BLOCKSIDE BAY and their 16x16 pixel portraits (painted in code, used by dialogue,
+// the title crew strip and the HUD).
 
 export const CAST = {
   kai: { name: 'KAI NAVARRO', role: 'Wheelman', skin: '#c98a5e', hair: '#2a1a12', hairStyle: 'short', shirt: '#ff4fa3', eyes: '#1b1b1b', extra: 'stubble' },
@@ -12,9 +13,10 @@ export const CAST = {
   dispatch: { name: 'BBPD DISPATCH', role: 'Police radio', skin: '#3a4a6a', hair: '#1a2440', hairStyle: 'cap', shirt: '#1d3c8f', eyes: '#ffffff', extra: 'headset' },
 };
 
+// The player's crew, in the order the title screen shows them.
 export const CREW = ['kai', 'jolie', 'mari', 'teddy', 'dez', 'pia'];
 
-// Paints a portrait into a 16x16 area of ctx at (ox, oy) with pixel size s.
+/** Paints a portrait into a 16x16 area of ctx at (ox, oy) with pixel size s. */
 export function paintPortrait(ctx, id, ox = 0, oy = 0, s = 1, bg = null) {
   const c = CAST[id];
   const px = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(ox + x * s, oy + y * s, w * s, h * s); };
@@ -59,6 +61,7 @@ export function paintPortrait(ctx, id, ox = 0, oy = 0, s = 1, bg = null) {
   }
 }
 
+/** Darkens (amt < 0) or lightens (amt > 0, towards white) a #rrggbb colour by a 0..1 fraction. */
 export function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
   let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
@@ -68,7 +71,7 @@ export function shade(hex, amt) {
 }
 
 const portraitCache = {};
-// A data URL portrait sized for <img> with image-rendering: pixelated.
+/** A data URL portrait sized for <img> with image-rendering: pixelated (cached per id + background). */
 export function portraitURL(id, bg = '#2b1840') {
   const key = id + bg;
   if (!portraitCache[key]) {
