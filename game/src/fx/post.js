@@ -1,9 +1,12 @@
-// Post-processing: the scene renders into a multisampled half-float target, then a bright pass feeds a
-// two-level blurred bloom (neon tubes, light bars, muzzle flashes and the searchlight glow), and a final
-// composite adds a soft highlight shoulder (sunlit pastel walls keep their colour instead of clipping),
-// saturation, vignette and speed streaks at high speed. QUALITY LOW skips all of it.
+// Post-processing. Its one job: draw a frame through the screen-space effect chain. The scene renders
+// into a multisampled half-float target; a bright pass feeds a two-level blurred bloom (neon tubes, light
+// bars, muzzle flashes and the searchlight glow); a final composite adds a soft highlight shoulder / filmic
+// tone curve (sunlit pastel walls keep their colour instead of clipping), saturation, the time-of-day
+// colour grade, vignette, lens fringing and speed streaks. With `post.enabled` off (QUALITY LOW) the
+// scene is drawn straight to the screen. The settings object `post` is written by grade.js and the camera.
 const THREE = window.THREE;
 
+// Live post settings, read every frame by renderFrame().
 export const post = {
   enabled: true,
   bloom: 0.9,          // bloom strength
@@ -21,8 +24,10 @@ export const post = {
   aberr: 0,            // extra lens fringing (pain flash)
 };
 
+// Full-screen triangle pair: positions are already in clip space.
 const VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 
+// Keeps only pixels brighter than the threshold (soft knee), for the bloom.
 const BRIGHT = `uniform sampler2D tSrc; uniform float threshold; varying vec2 vUv;
 void main(){
   vec3 c = texture2D(tSrc, vUv).rgb;
@@ -31,6 +36,8 @@ void main(){
   gl_FragColor = vec4(c * k, 1.0);
 }`;
 
+// One direction of a 9-tap Gaussian using linear-filtered taps (weights sum to 1).
+// With dir = (0, 0) it is a plain copy, used to downsample.
 const BLUR = `uniform sampler2D tSrc; uniform vec2 dir; varying vec2 vUv;
 void main(){
   vec3 c = texture2D(tSrc, vUv).rgb * 0.2270;
@@ -41,10 +48,12 @@ void main(){
   gl_FragColor = vec4(c, 1.0);
 }`;
 
+// Final pass to the screen: fringing, speed blur/streaks, bloom, tone curve, saturation, grade, vignette.
 const COMPOSITE = `uniform sampler2D tScene; uniform sampler2D tBloomA; uniform sampler2D tBloomB;
 uniform float bloom; uniform float exposure; uniform float sat; uniform float vignette; uniform float speed; uniform float warm; uniform float time;
 uniform float filmic; uniform float contrast; uniform vec3 lift; uniform vec3 gain; uniform vec3 vigTint; uniform float aberr;
 uniform vec2 aspect; varying vec2 vUv;
+// Soft roll-off above 0.72 so bright pastels approach white without a hard clip.
 vec3 shoulder(vec3 x){
   float t = 0.72;
   vec3 over = t + (1.0 - t) * (1.0 - exp(-(x - t) / (1.0 - t)));
@@ -100,30 +109,34 @@ void main(){
   gl_FragColor = vec4(toSRGB(clamp(c, 0.0, 1.0)), 1.0);
 }`;
 
-let renderer, sceneRT, halfA, halfB, quarterA, quarterB;
-let quadScene, quadCam, quad, mBright, mBlur, mComp;
-const size = new THREE.Vector2();
+let renderer;
+// Render targets: full-res multisampled scene, then half- and quarter-res ping-pong pairs for the bloom.
+let sceneRT, halfA, halfB, quarterA, quarterB;
+let quadScene, quadCam, quad, brightMat, blurMat, compositeMat;
+const drawSize = new THREE.Vector2();
 
-function target(w, h, samples = 0) {
+// A linear-filtered half-float render target (with depth only when multisampled, i.e. the scene target).
+function makeTarget(w, h, samples = 0) {
   return new THREE.WebGLRenderTarget(Math.max(1, w), Math.max(1, h), {
     type: THREE.HalfFloatType, samples, depthBuffer: samples > 0,
     minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
   });
 }
 
+// Create the post materials and full-screen quad for this renderer, and size the targets.
 export function setupPost(r) {
   renderer = r;
   const shader = (fs, uniforms) => new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: fs, uniforms, depthTest: false, depthWrite: false });
-  mBright = shader(BRIGHT, { tSrc: { value: null }, threshold: { value: 1 } });
-  mBlur = shader(BLUR, { tSrc: { value: null }, dir: { value: new THREE.Vector2() } });
-  mComp = shader(COMPOSITE, {
+  brightMat = shader(BRIGHT, { tSrc: { value: null }, threshold: { value: 1 } });
+  blurMat = shader(BLUR, { tSrc: { value: null }, dir: { value: new THREE.Vector2() } });
+  compositeMat = shader(COMPOSITE, {
     tScene: { value: null }, tBloomA: { value: null }, tBloomB: { value: null },
     bloom: { value: 1 }, exposure: { value: 1 }, sat: { value: 1 }, vignette: { value: 0 }, speed: { value: 0 }, warm: { value: 0 }, time: { value: 0 },
     filmic: { value: 0.5 }, contrast: { value: 1 }, lift: { value: new THREE.Vector3() }, gain: { value: new THREE.Vector3(1, 1, 1) },
     vigTint: { value: new THREE.Vector3(1, 1, 1) }, aberr: { value: 0 },
     aspect: { value: new THREE.Vector2(1, 1) },
   });
-  quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mComp);
+  quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), compositeMat);
   quad.frustumCulled = false;
   quadScene = new THREE.Scene();
   quadScene.add(quad);
@@ -131,32 +144,36 @@ export function setupPost(r) {
   resizePost();
 }
 
+// Recreate the render targets to match the renderer's drawing buffer (call after a resize / pixel-ratio change).
 export function resizePost() {
   if (!renderer) return;
-  renderer.getDrawingBufferSize(size);
+  renderer.getDrawingBufferSize(drawSize);
   for (const t of [sceneRT, halfA, halfB, quarterA, quarterB]) t?.dispose();
-  sceneRT = target(size.x, size.y, 4);
-  halfA = target(size.x >> 1, size.y >> 1);
-  halfB = target(size.x >> 1, size.y >> 1);
-  quarterA = target(size.x >> 2, size.y >> 2);
-  quarterB = target(size.x >> 2, size.y >> 2);
+  sceneRT = makeTarget(drawSize.x, drawSize.y, 4);
+  halfA = makeTarget(drawSize.x >> 1, drawSize.y >> 1);
+  halfB = makeTarget(drawSize.x >> 1, drawSize.y >> 1);
+  quarterA = makeTarget(drawSize.x >> 2, drawSize.y >> 2);
+  quarterB = makeTarget(drawSize.x >> 2, drawSize.y >> 2);
 }
 
+// Draw the full-screen quad with `mat` into `out` (null = the screen).
 function pass(mat, out) {
   quad.material = mat;
   renderer.setRenderTarget(out);
   renderer.render(quadScene, quadCam);
 }
 
-function blur(src, tmp, w, h) {
-  mBlur.uniforms.tSrc.value = src.texture;
-  mBlur.uniforms.dir.value.set(1 / w, 0);
-  pass(mBlur, tmp);
-  mBlur.uniforms.tSrc.value = tmp.texture;
-  mBlur.uniforms.dir.value.set(0, 1 / h);
-  pass(mBlur, src);
+// Separable blur of `target` in place (horizontal into `scratch`, vertical back), for a w x h target.
+function blurInPlace(target, scratch, w, h) {
+  blurMat.uniforms.tSrc.value = target.texture;
+  blurMat.uniforms.dir.value.set(1 / w, 0);
+  pass(blurMat, scratch);
+  blurMat.uniforms.tSrc.value = scratch.texture;
+  blurMat.uniforms.dir.value.set(0, 1 / h);
+  pass(blurMat, target);
 }
 
+// Render one frame of `scene` from `camera` through the post chain to the screen; `time` drives the streaks.
 export function renderFrame(scene, camera, time = 0) {
   if (!post.enabled) {
     renderer.setRenderTarget(null);
@@ -166,17 +183,17 @@ export function renderFrame(scene, camera, time = 0) {
   renderer.setRenderTarget(sceneRT);
   renderer.render(scene, camera);
   // Bright pass at half resolution, blurred twice; a quarter-res copy blurred again for the wide halo.
-  mBright.uniforms.tSrc.value = sceneRT.texture;
-  mBright.uniforms.threshold.value = post.threshold;
-  pass(mBright, halfA);
-  blur(halfA, halfB, halfA.width, halfA.height);
-  blur(halfA, halfB, halfA.width, halfA.height);
-  mBlur.uniforms.tSrc.value = halfA.texture;
-  mBlur.uniforms.dir.value.set(0, 0);
-  pass(mBlur, quarterA);
-  blur(quarterA, quarterB, quarterA.width, quarterA.height);
-  blur(quarterA, quarterB, quarterA.width, quarterA.height);
-  const u = mComp.uniforms;
+  brightMat.uniforms.tSrc.value = sceneRT.texture;
+  brightMat.uniforms.threshold.value = post.threshold;
+  pass(brightMat, halfA);
+  blurInPlace(halfA, halfB, halfA.width, halfA.height);
+  blurInPlace(halfA, halfB, halfA.width, halfA.height);
+  blurMat.uniforms.tSrc.value = halfA.texture;
+  blurMat.uniforms.dir.value.set(0, 0);
+  pass(blurMat, quarterA);
+  blurInPlace(quarterA, quarterB, quarterA.width, quarterA.height);
+  blurInPlace(quarterA, quarterB, quarterA.width, quarterA.height);
+  const u = compositeMat.uniforms;
   u.tScene.value = sceneRT.texture;
   u.tBloomA.value = halfA.texture;
   u.tBloomB.value = quarterA.texture;
@@ -186,6 +203,6 @@ export function renderFrame(scene, camera, time = 0) {
   u.lift.value.set(post.lift[0], post.lift[1], post.lift[2]);
   u.gain.value.set(post.gain[0], post.gain[1], post.gain[2]);
   u.vigTint.value.set(post.vigTint[0], post.vigTint[1], post.vigTint[2]);
-  u.aspect.value.set(size.x / size.y, 1);
-  pass(mComp, null);
+  u.aspect.value.set(drawSize.x / drawSize.y, 1);
+  pass(compositeMat, null);
 }
