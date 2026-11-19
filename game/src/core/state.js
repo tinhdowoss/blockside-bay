@@ -1,4 +1,5 @@
 // Shared game state (the run in progress) plus a tiny event bus between systems.
+// Every system imports `game` and reads/writes it directly; save.js serialises it.
 
 export const game = {
   mode: 'boot',          // boot | title | play | pause | down
@@ -23,26 +24,33 @@ export const game = {
 };
 
 const handlers = {};
+/** Subscribes fn to an event name. */
 export function on(evt, fn) { (handlers[evt] ||= []).push(fn); }
+/** Calls every handler of evt, in subscription order, with data. */
 export function emit(evt, data) { for (const fn of handlers[evt] || []) fn(data); }
 
+/** Adds (or with a negative n, spends) cash, never below zero, and emits 'cash'. */
 export function addCash(n) {
   game.cash = Math.max(0, game.cash + n);
   emit('cash', n);
 }
 
+/** Raises one skill bar by amt, capped at 1. */
 export function bumpSkill(name, amt) {
   game.skills[name] = Math.min(1, game.skills[name] + amt);
 }
 
-// Overall completion % used by the save slots and the pause menu.
+const STORY_MISSIONS = 9;
+const MEDAL_WEIGHT = { gold: 1, silver: 0.66, bronze: 0.33 };
+
+/** Overall completion % used by the save slots and the pause menu. */
 export function completion() {
-  const story = game.missionsDone.length / 9;
+  const story = game.missionsDone.length / STORY_MISSIONS;
   const skills = Object.values(game.skills).reduce((a, b) => a + b, 0) / 4;
   const stolen = Math.min(1, game.stats.stolen / 30);
   // Side content: SEA GLASS shards, race medals, taxi fares and parcel runs.
-  const s = game.side || {};
-  const medals = Object.values(s.raceMedal || {}).reduce((a, m) => a + ({ gold: 1, silver: 0.66, bronze: 0.33 }[m] || 0), 0) / 3;
-  const side = (s.shells?.length || 0) / 30 * 0.4 + medals * 0.3 + Math.min(1, (s.fares || 0) / 10) * 0.15 + Math.min(1, (s.runs || 0) / 3) * 0.15;
+  const sideState = game.side || {};
+  const medals = Object.values(sideState.raceMedal || {}).reduce((a, m) => a + (MEDAL_WEIGHT[m] || 0), 0) / 3;
+  const side = (sideState.shells?.length || 0) / 30 * 0.4 + medals * 0.3 + Math.min(1, (sideState.fares || 0) / 10) * 0.15 + Math.min(1, (sideState.runs || 0) / 3) * 0.15;
   return Math.round((story * 0.6 + skills * 0.15 + stolen * 0.05 + side * 0.2) * 100);
 }

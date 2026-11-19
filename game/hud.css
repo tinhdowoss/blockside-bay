@@ -1,4 +1,5 @@
-/* BLOCKSIDE BAY — HUD, dialogue and banner styles. Chunky, outlined, readable when shrunk. */
+/* BLOCKSIDE BAY: in-play HUD styles (mission panel, cash/stars/weapons, police response, minimap, speedo,
+   radio, crosshair, side-activity panels, dialogue box, results card). Chunky, outlined, readable when shrunk. */
 :root {
   --ink: #12061c;
   --pink: #ff4fa3;
@@ -9,6 +10,7 @@
 }
 #hud, #dialogue, #menus, #toast { font-family: var(--font); color: #fff; user-select: none; }
 #hud { position: absolute; inset: 0; pointer-events: none; }
+/* .outl: thick ink outline around text; .panel: the dark boxed card every HUD block sits on. */
 .outl { text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 3px 0 var(--ink); }
 .panel { background: rgba(18, 6, 28, 0.78); border: 3px solid var(--ink); box-shadow: 0 0 0 2px rgba(255,255,255,0.18) inset, 4px 4px 0 rgba(0,0,0,0.35); }
 

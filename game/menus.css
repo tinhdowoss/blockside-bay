@@ -1,4 +1,5 @@
-/* BLOCKSIDE BAY — title screen and pause menu. */
+/* BLOCKSIDE BAY: title screen and pause menu styles (title menu and crew strip, pause tabs, map/story/stats
+   pages, settings, controls and credits panels, entrance animations). Built by ui/menus.js. */
 #menus { position: absolute; inset: 0; pointer-events: none; }
 #menus > div { pointer-events: auto; }
 .btn { cursor: pointer; }
@@ -16,6 +17,7 @@
 #title .menu .btn.sel::before { content: '\25B6  '; }
 #title h3, #pause h3 { margin: 0 0 8px; font-size: 15px; color: #ffd23f; letter-spacing: 2px; }
 #title .k { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 5px 0; font-family: "Trebuchet MS", sans-serif; font-weight: bold; }
+/* .kc: a keycap label, shared by title, pause and the HUD tip banner. */
 .kc { display: inline-block; min-width: 50px; text-align: center; padding: 3px 6px; background: #fff; color: #12061c; border: 2px solid #12061c; box-shadow: 0 3px 0 #12061c; font-family: var(--font); font-size: 12px; text-shadow: none; }
 #title .crewlabel { position: absolute; left: 44px; bottom: 140px; font-size: 16px; color: #ffd23f; letter-spacing: 3px; }
 #title .crew { position: absolute; left: 44px; bottom: 14px; display: flex; gap: 10px; align-items: flex-end; }
@@ -118,6 +120,8 @@
 .credits .cl.dim { margin-top: 12px; color: #ffe9a8; font-style: italic; }
 .credits .cgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 14px; font-size: 13px; }
 .credits .cgrid b { font-weight: normal; margin-right: 6px; }
+
+/* Title sub-panels: .wide (controls/credits), .mid (compact settings) */
 #title .sub.wide { width: 700px; left: 530px; top: 250px; max-height: 420px; overflow: auto; }
 #title .sub.mid { width: 540px; top: 252px; padding: 10px 14px; }
 #title .sub.mid h3 { margin-bottom: 0; }
