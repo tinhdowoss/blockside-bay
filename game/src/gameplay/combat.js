@@ -14,6 +14,7 @@ import { rand, range } from '../core/rng.js';
 export const shooters = [];
 let scene;
 
+// Default outfit per faction; spawnShooter's opts.look overrides individual pieces.
 const GANG_LOOKS = {
   vipers: { shirt: '#a020f0', pants: '#1a1a1a', bandana: '#3fff6b', skin: '#c98a5e', hair: '#111111', shades: true },
   salt: { shirt: '#f4f4f4', pants: '#2b3a67', bandana: '#1d6fff', skin: '#e0a77a', hair: '#3a2010' },
@@ -153,7 +154,7 @@ export function damageCharacter(c, dmg, head, fromX, fromZ, at) {
   }
 }
 
-/** Slow health regen up to 40. */
+/** Slow health regen (1.5 HP/s) while below 40, capped at 40. */
 export function updateCombat(dt) {
   if (game.health < 40 && game.health > 0) game.health = Math.min(40, game.health + dt * 1.5);
 }

@@ -1,5 +1,5 @@
 // BLOCKSIDE BAY: boot (renderer, world, systems), game states (title, play, pause) and the main loop
-// that steps every system in order. Gameplay rules live in gameplay/*; this file only wires them up.
+// that steps every system in a fixed order. Gameplay rules live in gameplay/*; this file only wires them up.
 import { CITY_SIZE } from './config.js';
 import { setSeed } from './rng.js';
 import { buildCity, updateCity, city, mats as cityMats } from '../world/city.js';
@@ -225,7 +225,7 @@ function onKey(code) {
 }
 
 const QUIPS = ['Nice shirt. Very... loud.', 'Have you seen the yacht? Pink, like everything here.', 'Keep it moving, flamingo.', 'The Vipers own Neon Mile after dark. Careful.', 'Sunscreen and bail money. Bay essentials.'];
-// A walking pedestrian within 3.5 m answers with a random quip bubble.
+// The nearest walking pedestrian within 3.5 m answers with a random quip bubble.
 function talkToNearest() {
   let best = null, bestDist = 3.5;
   for (const p of peds) { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < bestDist && p.state === 'walk') { bestDist = d; best = p; } }

@@ -1,7 +1,7 @@
 // Audio mixer: one AudioContext, four buses (music, sfx, ambience, ui) that meet in a master chain of
 //   glue compressor -> makeup gain -> brick-wall limiter (fast compressor) -> soft clipper -> output
 // plus two effect sends shared by everything: a convolution reverb (impulse response generated from
-// decaying stereo noise, so no files) and a filtered ping-pong delay. Small helpers build one-shot
+// decaying stereo noise, so no audio files) and a filtered ping-pong delay. Small helpers build one-shot
 // tones and noise bursts routed to a bus, with optional reverb/delay sends and stereo pan.
 
 export const mix = {
@@ -96,7 +96,7 @@ export function createMixer() {
   return mix;
 }
 
-/** Routes a node to a bus with optional sends and stereo pan. Returns the gain node you drive. */
+/** Routes a node to a bus with optional sends and stereo pan. Returns the last node in the chain (panner or the node itself). */
 export function route(node, { bus = mix.sfx, rev = 0, dly = 0, pan = 0 } = {}) {
   const ac = mix.ac;
   let tail = node;

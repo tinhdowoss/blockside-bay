@@ -1,5 +1,5 @@
-// Particles (sparks, debris, blood), muzzle flashes, bullet tracers and camera shake; smoke goes to the
-// soft puff system (smoke.js) and tyre marks to skidmarks.js.
+// Particles (sparks, debris, blood), muzzle flashes, bullet tracers and camera shake; smoke is handed to
+// the soft puff system (smoke.js) and tyre marks to skidmarks.js.
 import { glowTexture } from '../world/textures.js';
 import { setupSmoke, updateSmoke, puff } from './smoke.js';
 import { setupSkidmarks } from './skidmarks.js';
@@ -7,7 +7,7 @@ import { rand } from '../core/rng.js';
 
 const THREE = window.THREE;
 const MAX = 600;            // live particle cap; the oldest is dropped first
-const TRACERS = 24;
+const TRACERS = 24;         // pooled tracer meshes
 const parts = [];
 let inst, flashSprite, flashLight, scene;
 const tracers = [];

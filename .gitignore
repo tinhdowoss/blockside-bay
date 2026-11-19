@@ -1,4 +1,4 @@
-# BLOCKSIDE BAY: local build output (main.ts with MAKEFUN_OUTPUT_DIR=out), installed tools, macOS clutter.
+# BLOCKSIDE BAY: ignore local build output (main.ts run with MAKEFUN_OUTPUT_DIR=out), installed tools and macOS clutter.
 out/
 node_modules/
 .DS_Store

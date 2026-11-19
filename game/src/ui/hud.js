@@ -1,7 +1,7 @@
 // HUD: mission panel (stage, objective, next step, tip), street-rep bar, police response panel (every unit
 // by call sign with distance and state), clock, cash, wanted stars, weapon slots with ammo and locks,
 // health/armor, speedometer with gear and body condition, radio, crosshair, popups, banners and toasts.
-// Styles live in game/hud.css.
+// All styling lives in game/hud.css; this module only builds markup and updates it each frame.
 import { WEAPONS } from '../core/config.js';
 import { MISSIONS } from '../data/missions-data.js';
 import { game, on } from '../core/state.js';
@@ -34,6 +34,7 @@ const ICONS = {
   lock: ['......XXXX......', '.....X....X.....', '.....X....X.....', '....XXXXXXXX....', '....XXX..XXX....', '....XXX..XXX....', '....XXXXXXXX....', '................'],
 };
 
+// Rasterises one ICONS entry into a tiny white-on-transparent canvas.
 function icon(id) {
   const cv = document.createElement('canvas');
   cv.width = 16; cv.height = 8;
