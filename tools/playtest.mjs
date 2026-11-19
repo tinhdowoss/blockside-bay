@@ -1,5 +1,6 @@
 // BLOCKSIDE BAY play-test: serves game/, opens the real title screen, starts a new game and drives
-// through the core loop with simulated input, printing console errors and saving frames to --out.
+// through the core loop with simulated input (walk, steal a car, drive, drift, shoot, draw the police,
+// pause), printing console errors and saving a frame per step to --out. Ends with "errors: N".
 // Usage: PW_DIR=/path/with/node_modules node tools/playtest.mjs --out /tmp/pt
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
@@ -15,11 +16,13 @@ const outIdx = process.argv.indexOf('--out');
 const out = outIdx > 0 ? resolve(process.argv[outIdx + 1]) : '/tmp/blockside-playtest';
 mkdirSync(out, { recursive: true });
 
+// Static file server for game/ (paths outside it get a 404).
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const server = createServer((req, res) => {
   const p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   const f = join(gameDir, p === '/' ? 'index.html' : p);
   if (!f.startsWith(gameDir) || !existsSync(f) || statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' }[extname(f)] || 'application/octet-stream' });
+  res.writeHead(200, { 'content-type': TYPES[extname(f)] || 'application/octet-stream' });
   res.end(readFileSync(f));
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -30,6 +33,7 @@ page.on('console', (m) => { if (m.type() === 'error') { errors++; console.log('[
 page.on('pageerror', (e) => { errors++; console.log('[pageerror]', e.message); });
 await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
 await page.waitForTimeout(2500);
+// snap: save a numbered frame; hold: keep keys down for ms.
 const snap = async (n) => { await page.screenshot({ path: join(out, n + '.jpg'), type: 'jpeg', quality: 70 }); console.log('frame', n); };
 const hold = async (keys, ms) => { for (const k of keys) await page.keyboard.down(k); await page.waitForTimeout(ms); for (const k of keys) await page.keyboard.up(k); };
 await snap('01-title');
@@ -54,6 +58,7 @@ await snap('04-drive');
 console.log('after steal:', await page.evaluate(() => JSON.stringify({ inCar: !!__bb.player.vehicle, speed: __bb.player.vehicle?.speed.toFixed(1), stars: __bb.police.level, units: __bb.police.units.length })));
 await hold(['KeyW', 'KeyA', 'ShiftLeft'], 1200);
 await snap('05-drift');
+// Out of the car, pistol out, four shots.
 await page.keyboard.press('KeyF');
 await page.keyboard.press('Digit2');
 await page.mouse.click(640, 360);

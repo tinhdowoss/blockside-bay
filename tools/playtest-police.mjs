@@ -17,6 +17,7 @@ const outIdx = process.argv.indexOf('--out');
 const out = outIdx > 0 ? resolve(process.argv[outIdx + 1]) : '/tmp/blockside-police';
 mkdirSync(out, { recursive: true });
 
+// Static file server for game/ (paths outside it get a 404).
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json' };
 const server = createServer((req, res) => {
   const p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -38,6 +39,7 @@ const check = (ok, what) => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${what}`); i
 const wait = (ms) => page.waitForTimeout(ms);
 const snap = async (n) => { await page.screenshot({ path: join(out, n + '.jpg'), type: 'jpeg', quality: 75 }); };
 const hold = async (keys, ms) => { for (const k of keys) await page.keyboard.down(k); await wait(ms); for (const k of keys) await page.keyboard.up(k); };
+// A plain snapshot of the police and player state, read through the window.__bb debug handle.
 const state = () => page.evaluate(() => {
   const { police, player, game } = window.__bb;
   return {
@@ -61,7 +63,8 @@ async function drive(ms) {
     if (s.units.some((u) => u.speed > 3)) sawDriving = true;
   }
 }
-// Put the player beside a car (stopped for the moment) and press F.
+// Put the player beside a car (stopped for the moment) and press F. pickFn runs in the page, so it is
+// passed as source text; returns true if the player ends up driving the picked car.
 async function takeCar(pickFn) {
   if ((await state()).inCar) { await page.keyboard.press('KeyF'); await wait(200); }
   const ok = await page.evaluate((src) => {
@@ -78,6 +81,7 @@ async function takeCar(pickFn) {
   await wait(150);
   return page.evaluate(() => window.__bb.player.vehicle === window.__bbTarget);
 }
+// Car pickers for takeCar (they run inside the page).
 const nearestTraffic = (vehicles, police, player) => vehicles.filter((c) => c.driver === 'traffic' && !c.wrecked)
   .sort((a, b) => Math.hypot(a.x - player.x, a.z - player.z) - Math.hypot(b.x - player.x, b.z - player.z))[0];
 const nearestUnit = (vehicles, police, player) => police.units.filter((u) => u !== player.vehicle)
