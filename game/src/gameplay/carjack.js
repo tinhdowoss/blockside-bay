@@ -1,5 +1,5 @@
-// Entering, leaving and stealing vehicles (F). Pulling a driver out is a crime: +1 wanted star.
-// Boats board from up to 8.5 m and drop the player on the nearest shore.
+// Entering, leaving and stealing vehicles (F). Pulling a driver out is a crime: +1 wanted star
+// (+2 for a police car). Boats board from up to 8.5 m and drop the player on the nearest shore.
 import { player } from './player.js';
 import { snapCamera } from './camera.js';
 import { nearestVehicle } from './vehicles.js';

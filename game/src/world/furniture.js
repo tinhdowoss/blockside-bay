@@ -23,9 +23,9 @@ const cleared = (x, z) => furnitureClear.some(([cx, cz, r]) => Math.hypot(x - cx
 
 /** The light ('green' | 'amber' | 'red') shown to traffic travelling along axis at junction (i, j). */
 export function signalAt(i, j, axis, t = signals.t) {
-  const ph = (((t + (i + j) * WAVE_OFFSET) % CYCLE) + CYCLE) % CYCLE;
+  const phase = (((t + (i + j) * WAVE_OFFSET) % CYCLE) + CYCLE) % CYCLE;
   const half = GREEN + AMBER + CLEAR;
-  const local = axis === 'x' ? ph : (ph + half) % CYCLE;
+  const local = axis === 'x' ? phase : (phase + half) % CYCLE;
   if (local < GREEN) return 'green';
   if (local < GREEN + AMBER) return 'amber';
   return 'red';

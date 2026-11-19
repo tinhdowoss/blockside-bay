@@ -1,4 +1,5 @@
 // Dialogue box: pixel portrait, speaker name and typewriter text; lines queue up and auto-advance.
+// Styles live in game/hud.css (#dialogue, .dlg-*).
 import { CAST, portraitURL } from '../data/cast.js';
 
 const CHARS_PER_SECOND = 55;
@@ -36,6 +37,7 @@ function next() {
   // Dez's dark shirt would vanish on the dark box, so his name uses his accent cyan.
   el.querySelector('.dlg-name').style.color = speaker.shirt === '#222a3a' ? '#3fd0ff' : speaker.shirt;
   shown = 0;
+  // Reading time once fully typed: a base pause plus a little per character.
   hold = 2.2 + current.text.length * 0.035;
 }
 
