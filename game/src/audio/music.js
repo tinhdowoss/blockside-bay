@@ -7,7 +7,7 @@
 //   CARACOL 95.5   tropical    - guiro scrape, congas, bouncing bass, brass stabs, marimba melody
 //   LOW TIDE 79.3  lo-fi beats - swung boom-bap, dusty vinyl crackle, rhodes 9th chords, soft lead
 //
-// All original: progressions and melodies are generated, nothing is sampled or transcribed.
+// All original: progressions and melodies are generated at runtime; nothing is sampled or transcribed.
 import { STATIONS } from '../core/config.js';
 import { makeRng } from '../core/rng.js';
 import { mix, tone, noise, midi } from './mixer.js';
@@ -25,6 +25,7 @@ const PROG = {
 export const radio = { station: 0, on: false, step: 0, next: 0, arr: null, levels: new Array(7).fill(0.1) };
 
 // ---- drum kit ------------------------------------------------------------------------------------
+// Every drum voice routes to the music bus so the music slider and radio fades affect it.
 const M = () => ({ bus: mix.music });
 function kick(t, v = 0.9, low = 42) {
   const o = mix.ac.createOscillator(), g = mix.ac.createGain();

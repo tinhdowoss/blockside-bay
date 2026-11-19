@@ -1,7 +1,7 @@
 // Title screen (blocky logo, Continue / New / Load / Controls / Settings / Credits, crew portraits) and
 // the pause menu shell (MAP, MISSIONS, STATS, SAVE, SETTINGS, CONTROLS, CREDITS tabs). Page contents
-// live in menu-pages.js, settings-menu.js and pause-map.js; this file owns layout, navigation,
-// transitions and menu sounds. Styles live in game/menus.css.
+// live in menu-pages.js, settings-menu.js and pause-map.js; this file owns layout, keyboard/mouse
+// navigation, transitions and menu sounds. Styles live in game/menus.css.
 import { GAME_TITLE, SAVE_SLOTS } from '../core/config.js';
 import { drawBlockyTitle, textWidth } from './pixelfont.js';
 import { CAST, CREW, portraitURL } from '../data/cast.js';
@@ -75,6 +75,7 @@ export function showTitle() {
   renderTitleMenu();
 }
 
+// Redraws the title menu buttons with the current selection and rebinds their hover/click handlers.
 function renderTitleMenu() {
   const menu = root.querySelector('#title .menu');
   if (!menu) return;
@@ -223,10 +224,10 @@ export function menuKey(code) {
     return true;
   }
   if (document.getElementById('pause')) {
-    const i = TABS.indexOf(pauseTab);
+    const tabIndex = TABS.indexOf(pauseTab);
     if (pauseTab === 'settings' && settingsKey(code, root)) return true;
-    if (code === 'ArrowRight' || code === 'KeyD' || code === 'KeyE') setTab(TABS[(i + 1) % TABS.length]);
-    if (code === 'ArrowLeft' || code === 'KeyA' || code === 'KeyQ') setTab(TABS[(i + TABS.length - 1) % TABS.length]);
+    if (code === 'ArrowRight' || code === 'KeyD' || code === 'KeyE') setTab(TABS[(tabIndex + 1) % TABS.length]);
+    if (code === 'ArrowLeft' || code === 'KeyA' || code === 'KeyQ') setTab(TABS[(tabIndex + TABS.length - 1) % TABS.length]);
     if (pauseTab === 'map' && (code === 'ArrowDown' || code === 'KeyS')) { pauseSel = (pauseSel + 1) % 3; blip(); renderPause(); }
     if (pauseTab === 'map' && (code === 'ArrowUp' || code === 'KeyW')) { pauseSel = (pauseSel + 2) % 3; blip(); renderPause(); }
     if (pauseTab === 'map' && code === 'Enter') { uiClick(); doAction(MAP_ACTIONS[pauseSel]); }

@@ -1,7 +1,8 @@
 // BLOCKSIDE BAY screenshot tool: serves game/ on a local port, opens each ?shot= scene in headless
 // Chromium (playwright-core), waits for window.__shotReady and saves a 1280x720 JPEG under 256 KiB.
-// Scenes come from shots.json ({ name, query }); the scene code lives in game/src/dev/shots.js.
+// Scenes come from shots.json ({ name, query }); the scene staging code lives in game/src/dev/shots.js.
 // Usage: PW_DIR=/path/with/node_modules node tools/capture.mjs [name ...] [--out dir]
+//   name filters match any shot whose file name contains them; --out defaults to screenshots/.
 import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
@@ -46,13 +47,13 @@ for (const s of shots) {
   await page.goto(url);
   await page.waitForFunction('window.__shotReady === true', null, { timeout: 60000 });
   await page.waitForTimeout(300);
-  let q = START_QUALITY, buf;
+  let quality = START_QUALITY, buf;
   do {
-    buf = await page.screenshot({ type: 'jpeg', quality: q });
-    q -= QUALITY_STEP;
-  } while (buf.length > MAX_BYTES && q > MIN_QUALITY);
+    buf = await page.screenshot({ type: 'jpeg', quality });
+    quality -= QUALITY_STEP;
+  } while (buf.length > MAX_BYTES && quality > MIN_QUALITY);
   writeFileSync(join(outDir, s.name), buf);
-  console.log(`  saved ${s.name} ${(buf.length / 1024).toFixed(0)} KiB q=${q + QUALITY_STEP}`);
+  console.log(`  saved ${s.name} ${(buf.length / 1024).toFixed(0)} KiB q=${quality + QUALITY_STEP}`);
 }
 await browser.close();
 server.close();

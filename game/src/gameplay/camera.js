@@ -13,6 +13,7 @@ let camera;
 const camPos = new THREE.Vector3();
 const camLook = new THREE.Vector3();
 const target = new THREE.Vector3(), want = new THREE.Vector3(), dir = new THREE.Vector3();
+// Classic smoothstep: 0 below a, 1 above b, eased in between.
 const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
 
 /** Hands the module the scene camera it drives. */

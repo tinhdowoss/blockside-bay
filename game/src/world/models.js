@@ -1,5 +1,6 @@
 // Voxel models: blocky people, classic cars, the police helicopter and mission markers, built from
 // vertex-coloured boxes (muscle cars, scooters and boats live in vehicle-models.js).
+// Box arrays everywhere use the layout [x, y, z, sizeX, sizeY, sizeZ, colour].
 import { Batcher } from './voxel.js';
 import { CAR_MODELS } from '../core/config.js';
 import { shade } from '../data/cast.js';
@@ -134,10 +135,10 @@ export function makeCar(key, color) {
   glow.push([-W / 2 + 0.3, rideY + 0.42, L / 2 + 0.01, 0.38, 0.16, 0.06, '#fff6c8']);
   glow.push([W / 2 - 0.3, rideY + 0.42, -L / 2 - 0.01, 0.36, 0.14, 0.06, '#ff2040']);
   glow.push([-W / 2 + 0.3, rideY + 0.42, -L / 2 - 0.01, 0.36, 0.14, 0.06, '#ff2040']);
-  const wz = L / 2 - 0.85;
+  const wheelZ = L / 2 - 0.85;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    boxes.push([sx * (W / 2 - 0.12), 0.38, sz * wz, 0.32, 0.76, 0.76, '#1a1a1a']);
-    boxes.push([sx * (W / 2 - 0.02), 0.38, sz * wz, 0.14, 0.34, 0.34, '#bfbfbf']);
+    boxes.push([sx * (W / 2 - 0.12), 0.38, sz * wheelZ, 0.32, 0.76, 0.76, '#1a1a1a']);
+    boxes.push([sx * (W / 2 - 0.02), 0.38, sz * wheelZ, 0.14, 0.34, 0.34, '#bfbfbf']);
   }
   const g = new THREE.Group();
   g.add(part(boxes, glow));
