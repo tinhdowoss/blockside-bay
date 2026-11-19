@@ -3,22 +3,24 @@
 import { player } from './player.js';
 import { snapCamera } from './camera.js';
 import { nearestVehicle } from './vehicles.js';
-import { spawnPed, peds } from '../world/pedestrians.js';
+import { spawnPed } from '../world/pedestrians.js';
 import { addWanted, detachUnit } from './police.js';
 import { game, emit, bumpSkill } from '../core/state.js';
 import { CELL, GRID_N } from '../core/config.js';
 import { shoreSpot } from './boats.js';
 
-const REACH = 5;
+const REACH = 5;        // metres to a car door
+const BOAT_REACH = 8.5; // boats sit off the seawall, so they can be boarded from a little further away
 
+/** F key: leaves the current vehicle, or takes the nearest one in reach. */
 export function toggleVehicle() {
   if (player.vehicle) return exitVehicle();
-  // Boats sit off the seawall, so they can be boarded from a little further away.
-  const v = nearestVehicle(player.x, player.z, 8.5, (c) => !c.wrecked && Math.hypot(c.x - player.x, c.z - player.z) < (c.spec.boat ? 8.5 : REACH));
+  const v = nearestVehicle(player.x, player.z, BOAT_REACH, (c) => !c.wrecked && Math.hypot(c.x - player.x, c.z - player.z) < (c.spec.boat ? BOAT_REACH : REACH));
   if (!v) return false;
   return stealVehicle(v);
 }
 
+/** Puts the player in v. Unowned vehicles count as stolen and (unless quiet) raise the wanted level. */
 export function stealVehicle(v, quiet = false) {
   const hadDriver = v.driver === 'traffic' || v.driver === 'police';
   if (hadDriver) ejectDriver(v);
@@ -48,17 +50,17 @@ export function stealVehicle(v, quiet = false) {
   return true;
 }
 
+// The old driver lands on the street beside the car and runs.
 function ejectDriver(v) {
-  // The old driver lands on the street beside the car and runs.
   const bx = Math.max(0, Math.min(GRID_N - 1, Math.floor(v.x / CELL)));
   const bz = Math.max(0, Math.min(GRID_N - 1, Math.floor(v.z / CELL)));
-  const p = spawnPed(bx, bz, 0, v.police ? { look: { shirt: '#1d3c8f', pants: '#1d2440', hat: '#1d2440', badge: true } } : {});
-  const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
-  p.x = v.x + sx * 2.2; p.z = v.z + sz * 2.2;
-  p.state = 'flee'; p.fleeT = 6; p.fx = sx; p.fz = sz;
-  void peds;
+  const ped = spawnPed(bx, bz, 0, v.police ? { look: { shirt: '#1d3c8f', pants: '#1d2440', hat: '#1d2440', badge: true } } : {});
+  const sideX = Math.cos(v.heading), sideZ = -Math.sin(v.heading);
+  ped.x = v.x + sideX * 2.2; ped.z = v.z + sideZ * 2.2;
+  ped.state = 'flee'; ped.fleeT = 6; ped.fx = sideX; ped.fz = sideZ;
 }
 
+/** Steps out on the driver's side (or onto the nearest shore from a boat); false if that is not possible. */
 export function exitVehicle() {
   const v = player.vehicle;
   if (!v) return false;
@@ -67,8 +69,8 @@ export function exitVehicle() {
   if (v.spec.boat && !shore) { emit('toast', { text: 'TOO FAR FROM SHORE', color: '#3fd0ff' }); return false; }
   v.driver = null;
   v.controls.throttle = 0; v.controls.brake = 0; v.controls.steer = 0; v.controls.handbrake = true;
-  const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
-  player.x = shore ? shore.x : v.x + sx * 2.3; player.z = shore ? shore.z : v.z + sz * 2.3;
+  const sideX = Math.cos(v.heading), sideZ = -Math.sin(v.heading);
+  player.x = shore ? shore.x : v.x + sideX * 2.3; player.z = shore ? shore.z : v.z + sideZ * 2.3;
   player.yaw = v.heading;
   player.vehicle = null;
   emit('exitVehicle', v);

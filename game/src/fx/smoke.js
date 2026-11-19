@@ -7,6 +7,7 @@ const THREE = window.THREE;
 const MAX = 500;
 const puffs = [];
 let geo, mesh, offs, cols;
+// Ambient tint applied to every puff; the colour grade (fx/grade.js) writes it each frame.
 export const smokeLight = new THREE.Color(1, 1, 1);
 
 const VS = `attribute vec4 aOff; attribute vec4 aCol; varying vec2 vUv; varying vec4 vCol;
@@ -28,6 +29,7 @@ void main(){
   #include <colorspace_fragment>
 }`;
 
+/** Creates the instanced billboard mesh for all puffs. */
 export function setupSmoke(scene) {
   const plane = new THREE.PlaneGeometry(1, 1);
   geo = new THREE.InstancedBufferGeometry();
@@ -46,19 +48,19 @@ export function setupSmoke(scene) {
   scene.add(mesh);
 }
 
-const c = new THREE.Color();
-// size: start diameter; grow: extra diameter over its life; alpha: peak opacity.
+const tint = new THREE.Color();
+/** Adds one puff. size: start diameter; grow: extra diameter over its life; alpha: peak opacity. */
 export function puff(x, y, z, opts = {}) {
   if (puffs.length >= MAX) puffs.shift();
-  c.set(opts.color || '#eeeeee');
+  tint.set(opts.color || '#eeeeee');
   puffs.push({
     x, y, z, vx: opts.vx ?? (rand() - 0.5) * 0.8, vy: opts.vy ?? 0.8 + rand() * 0.8, vz: opts.vz ?? (rand() - 0.5) * 0.8,
     life: opts.life ?? 1.8, max: opts.life ?? 1.8, size: opts.size ?? 1.2, grow: opts.grow ?? 2.4, alpha: opts.alpha ?? 0.55,
-    r: c.r, g: c.g, b: c.b,
+    r: tint.r, g: tint.g, b: tint.b,
   });
 }
 
-// Puffs are held still while the simulation is frozen (dt = 0) so staged shots keep their smoke.
+/** Moves and fades every puff. They are held still while the simulation is frozen (dt = 0) so staged shots keep their smoke. */
 export function updateSmoke(dt) {
   let n = 0;
   for (let i = puffs.length - 1; i >= 0; i--) {
@@ -79,5 +81,5 @@ export function updateSmoke(dt) {
   cols.needsUpdate = true;
 }
 
-// Set the age of every live puff (0..1) at once: staged shots pre-age smoke so it reads as a trail.
+/** Sets the age of every live puff (0..1) at once: staged shots pre-age smoke so it reads as a trail. */
 export function agePuffs(fn) { puffs.forEach((p, i) => { p.life = p.max * (1 - fn(i, puffs.length)); }); }

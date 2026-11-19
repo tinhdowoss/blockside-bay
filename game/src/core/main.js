@@ -1,19 +1,19 @@
-// BLOCKSIDE BAY — boot (renderer, world, systems), game states (title, play, pause) and the main loop
+// BLOCKSIDE BAY: boot (renderer, world, systems), game states (title, play, pause) and the main loop
 // that steps every system in order. Gameplay rules live in gameplay/*; this file only wires them up.
 import { CITY_SIZE } from './config.js';
 import { setSeed } from './rng.js';
-import { buildCity, updateCity, city } from '../world/city.js';
+import { buildCity, updateCity, city, mats as cityMats } from '../world/city.js';
 import { setupSky, updateSky, sky, setHour } from '../world/daylight.js';
 import { setupEffects, updateEffects } from '../fx/effects.js';
 import { setupVehicles, updateVehicles, vehicles, Vehicle } from '../gameplay/vehicles.js';
 import { setupPlayer, updatePlayer, placePlayer, player, syncModel } from '../gameplay/player.js';
 import { setupCamera, updateCamera, setCameraPose } from '../gameplay/camera.js';
-import { setupInput, endFrame, input, tapped } from './input.js';
+import { setupInput, endFrame, input } from './input.js';
 import { populateTraffic, updateTraffic } from '../world/traffic.js';
 import { setupPedestrians, populatePeds, updatePeds, peds } from '../world/pedestrians.js';
 import { toggleVehicle, exitVehicle } from '../gameplay/carjack.js';
-import { setupPolice, updatePolice, police, clearWanted, updateHeliGlare } from '../gameplay/police.js';
-import { setupCombat, updateCombat, shooters } from '../gameplay/combat.js';
+import { setupPolice, updatePolice, clearWanted, updateHeliGlare } from '../gameplay/police.js';
+import { setupCombat, updateCombat } from '../gameplay/combat.js';
 import { setupConsequences, updateConsequences } from '../gameplay/consequences.js';
 import { BOAT_SPOTS } from '../gameplay/boats.js';
 import { setupWeapons, updateWeapons } from '../gameplay/weapons.js';
@@ -28,13 +28,12 @@ import { initAudio, updateAudio, setRadioPlaying, nextStation, setupAudioEvents 
 import { setupStats, updateStats, freshStats } from '../gameplay/stats.js';
 import { setupMenus, showTitle, hideMenus, openPause, menuKey } from '../ui/menus.js';
 import { saveGame, loadGame } from './save.js';
-import { game, on, emit } from './state.js';
+import { game, emit } from './state.js';
 import { stageShot } from '../dev/shots.js';
 import { setupProgression } from '../gameplay/progression.js';
 import { setupPost, resizePost, renderFrame, post } from '../fx/post.js';
 import { loadSettings } from './settings.js';
 import { applyGrade } from '../fx/grade.js';
-import { mats as cityMats } from '../world/city.js';
 import { buildLandmarks, updateLandmarks } from '../world/landmarks.js';
 import { buildStorefronts } from '../world/storefronts.js';
 import { buildFurniture, updateFurniture } from '../world/furniture.js';
@@ -63,6 +62,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 2600);
 
+// Setup order matters: the city exists before anything that reads it, and the HUD and menus last.
 setupPost(renderer);
 loadSettings(renderer, !!SHOT);
 buildCity(scene);
@@ -111,8 +111,8 @@ addEventListener('resize', () => {
 let showcaseCar = null;
 const SHOWCASE = { x: CITY_SIZE + 2.5, z: 150 };
 
+// The pink Coralline parked on Seaglass Boulevard with Kai leaning beside it (title backdrop).
 function setupShowcase() {
-  // The pink Coralline parked on Seaglass Boulevard with Kai leaning beside it.
   if (!showcaseCar || !vehicles.includes(showcaseCar)) showcaseCar = new Vehicle('coralline', SHOWCASE.x, SHOWCASE.z, 0.0, '#ff4fa3');
   showcaseCar.keep = true;
   showcaseCar.x = SHOWCASE.x; showcaseCar.z = SHOWCASE.z; showcaseCar.heading = 0;
@@ -124,6 +124,7 @@ function setupShowcase() {
   syncModel();
 }
 
+/** Switches to the title screen: HUD off, showcase staged, radio on. */
 export function enterTitle() {
   game.mode = 'title';
   showHud(false);
@@ -137,6 +138,7 @@ export function enterTitle() {
   setRadioPlaying(true);
 }
 
+// Fresh-run values for everything a new game (or a load, before the slot is applied) resets.
 function resetRun() {
   Object.assign(game, {
     cash: 2500, health: 100, armor: 50, weapons: { fists: true, pistol: true, smg: false, pump: false, lance: false },
@@ -165,8 +167,8 @@ function newGame() {
   resetRun();
   game.slot = 0;
   setHour(10.5);
-  const s = city.landmarks.safehouse;
-  startPlaying(s.x - 7, s.z);
+  const safehouse = city.landmarks.safehouse;
+  startPlaying(safehouse.x - 7, safehouse.z);
   emit('playStart', true);
   say('kai', 'Blockside Bay. Six years and the sun still hits like a bat.');
   say('mari', "Kai! It's Mari. Come by the yellow marker outside your place - I've got work.");
@@ -202,6 +204,7 @@ function quitToTitle() {
   enterTitle();
 }
 
+// Global key handler: menus get every key while open; in play, Esc/M pause, F enters/exits, E talks or tunes.
 function onKey(code) {
   initAudio();
   if (game.mode === 'title' || game.mode === 'pause') {
@@ -222,9 +225,10 @@ function onKey(code) {
 }
 
 const QUIPS = ['Nice shirt. Very... loud.', 'Have you seen the yacht? Pink, like everything here.', 'Keep it moving, flamingo.', 'The Vipers own Neon Mile after dark. Careful.', 'Sunscreen and bail money. Bay essentials.'];
+// A walking pedestrian within 3.5 m answers with a random quip bubble.
 function talkToNearest() {
-  let best = null, bd = 3.5;
-  for (const p of peds) { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < bd && p.state === 'walk') { bd = d; best = p; } }
+  let best = null, bestDist = 3.5;
+  for (const p of peds) { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < bestDist && p.state === 'walk') { bestDist = d; best = p; } }
   if (best) emit('popup', { text: QUIPS[Math.floor(Math.random() * QUIPS.length)], x: best.x, y: 2.4, z: best.z, color: '#ffffff' });
 }
 
@@ -232,6 +236,7 @@ function talkToNearest() {
 let last = SHOT ? 12.5 : performance.now() / 1000, t = 0, frozen = false;
 export const loop = { step, render, freeze: (f) => { frozen = f; } };
 
+// Simulation: advances every system by dt seconds (skipped while frozen for staged shots).
 function step(dt) {
   t += dt;
   const playing = game.mode === 'play' || game.mode === 'down';
@@ -264,13 +269,14 @@ function step(dt) {
 }
 
 let hurt = 0, lastHealth = 100;
+// Presentation: sky, animated world dressing, camera, HUD, audio listener, grade and the final frame.
 function render(dt, now) {
   const night = updateSky(game.mode === 'pause' ? 0 : dt, player, scene);
-  const wdt = game.mode === 'pause' ? 0 : dt;
+  const worldDt = game.mode === 'pause' ? 0 : dt;
   updateCity(t, night, player);
-  updateLandmarks(t, wdt, night);
-  updateFurniture(wdt);
-  updateClouds(wdt, player);
+  updateLandmarks(t, worldDt, night);
+  updateFurniture(worldDt);
+  updateClouds(worldDt, player);
   updateCarLights(player, night, t, player.vehicle);
   if (game.mode === 'title' && !SHOT) {
     const a = now * 0.05;
@@ -310,4 +316,3 @@ if (SHOT) {
   enterTitle();
 }
 requestAnimationFrame(frame);
-void [sky, police, shooters, Vehicle, tapped, populateTraffic];

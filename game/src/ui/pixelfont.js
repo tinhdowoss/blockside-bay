@@ -1,4 +1,5 @@
 // A 5x7 bitmap font of our own, used for the blocky logo, neon signs and the city map labels.
+// Each glyph is 7 rows; each row is a 5-bit mask with the leftmost pixel in the highest bit.
 
 const G = {
   A: [14, 17, 17, 31, 17, 17, 17], B: [30, 17, 17, 30, 17, 17, 30], C: [14, 17, 16, 16, 16, 17, 14],
@@ -23,11 +24,12 @@ const G = {
 export const GLYPH_W = 5;
 export const GLYPH_H = 7;
 
+/** Width in pixels of text drawn at scale with gap blank columns between glyphs. */
 export function textWidth(text, scale = 1, gap = 1) {
   return text.length ? (text.length * (GLYPH_W + gap) - gap) * scale : 0;
 }
 
-// Draws text with square pixels; returns the width drawn.
+/** Draws text with square pixels (unknown characters draw as '?'); returns the width drawn. */
 export function drawPixelText(ctx, text, x, y, scale, color, gap = 1) {
   ctx.fillStyle = color;
   let cx = x;
@@ -43,20 +45,16 @@ export function drawPixelText(ctx, text, x, y, scale, color, gap = 1) {
   return cx - x - gap * scale;
 }
 
-// Chunky extruded text: a dark 3D side, an outline and a two-tone face (top colour, bottom colour).
+/** Chunky extruded text: a dark 3D side, an outline and a two-tone face (top colour, bottom colour). */
 export function drawBlockyTitle(ctx, text, x, y, scale, top, bottom, side = '#3a0d4a', depth = 4) {
   for (let d = depth; d >= 1; d--) drawPixelText(ctx, text, x + d * scale * 0.5, y + d * scale * 0.5, scale, side);
   for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
     drawPixelText(ctx, text, x + ox * scale * 0.35, y + oy * scale * 0.35, scale, '#1a0526');
   }
-  const g = ctx.createLinearGradient(0, y, 0, y + GLYPH_H * scale);
-  g.addColorStop(0, top);
-  g.addColorStop(0.55, top);
-  g.addColorStop(0.56, bottom);
-  g.addColorStop(1, bottom);
-  drawPixelText(ctx, text, x, y, scale, g);
-  // Highlight row on each glyph's top pixels.
-  ctx.globalAlpha = 0.45;
-  drawPixelText(ctx, text, x, y - scale * 0.15, scale, 'rgba(255,255,255,0.0)');
-  ctx.globalAlpha = 1;
+  const face = ctx.createLinearGradient(0, y, 0, y + GLYPH_H * scale);
+  face.addColorStop(0, top);
+  face.addColorStop(0.55, top);
+  face.addColorStop(0.56, bottom);
+  face.addColorStop(1, bottom);
+  drawPixelText(ctx, text, x, y, scale, face);
 }

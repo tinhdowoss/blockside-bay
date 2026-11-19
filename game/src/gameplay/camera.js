@@ -15,11 +15,13 @@ const camLook = new THREE.Vector3();
 const target = new THREE.Vector3(), want = new THREE.Vector3(), dir = new THREE.Vector3();
 const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
 
+/** Hands the module the scene camera it drives. */
 export function setupCamera(cam) { camera = cam; }
 
-// 0..1 'rush' of a car near its top speed: drives FOV, rumble and the speed streaks.
+/** 0..1 'rush' of a car near its top speed: drives FOV, rumble and the speed streaks. */
 export const speedRush = (v) => smooth(0.45, 1, v.speed / v.spec.top);
 
+/** Per-frame follow: picks the rig for foot or car, avoids walls, applies FOV and shake. */
 export function updateCamera(dt, now) {
   const v = player.vehicle;
   let dist, height, side, lookAhead, rush = 0;
@@ -42,16 +44,16 @@ export function updateCamera(dt, now) {
   }
   post.speed += (rush * 0.85 - post.speed) * Math.min(1, dt * 4);
   camera.updateProjectionMatrix();
-  const s = Math.sin(player.camYaw), c = Math.cos(player.camYaw);
-  const cp = Math.cos(player.camPitch), sp = Math.sin(player.camPitch);
-  want.set(target.x - s * dist * cp - c * side, target.y + height + sp * dist, target.z - c * dist * cp + s * side);
+  const sinYaw = Math.sin(player.camYaw), cosYaw = Math.cos(player.camYaw);
+  const cosPitch = Math.cos(player.camPitch), sinPitch = Math.sin(player.camPitch);
+  want.set(target.x - sinYaw * dist * cosPitch - cosYaw * side, target.y + height + sinPitch * dist, target.z - cosYaw * dist * cosPitch + sinYaw * side);
   // Keep the camera out of walls.
   dir.copy(want).sub(target);
   const len = dir.length(); dir.normalize();
   const hit = rayBuildings(target.x, target.y, target.z, dir.x, dir.y, dir.z, len);
   if (hit < len) want.copy(target).addScaledVector(dir, Math.max(1.2, hit - 0.4));
   camPos.lerp(want, v ? Math.min(1, dt * 10) : Math.min(1, dt * 18));
-  camLook.set(target.x + s * lookAhead, target.y + 0.3 - (v ? 0 : sp * 2), target.z + c * lookAhead);
+  camLook.set(target.x + sinYaw * lookAhead, target.y + 0.3 - (v ? 0 : sinPitch * 2), target.z + cosYaw * lookAhead);
   camera.position.copy(camPos);
   if (game.shake !== false) {
     // Impacts/gunfire (fx.shake) plus a road rumble that builds with speed.
@@ -61,11 +63,12 @@ export function updateCamera(dt, now) {
   camera.lookAt(camLook);
 }
 
+/** Jumps the smoothed camera position behind the player (after entering a car). */
 export function snapCamera() {
   camPos.set(player.x - Math.sin(player.camYaw) * 8, 4, player.z - Math.cos(player.camYaw) * 8);
 }
 
-// Direct camera placement for menus and screenshot staging.
+/** Direct camera placement for menus and screenshot staging. */
 export function setCameraPose(px, py, pz, lx, ly, lz) {
   camPos.set(px, py, pz);
   camera.position.copy(camPos);

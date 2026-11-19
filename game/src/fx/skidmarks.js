@@ -1,5 +1,5 @@
 // Skid marks: dark rubber strips laid on the asphalt under sliding or hard-braking tyres. A ring buffer of
-// flat quads in one instanced draw; old marks fade out as new ones are laid.
+// flat quads in one instanced draw; when the buffer is full the oldest mark is overwritten.
 const THREE = window.THREE;
 const MAX = 1400;
 let geo, segs, alphas, head = 0, count = 0;
@@ -20,6 +20,7 @@ void main(){
   #include <colorspace_fragment>
 }`;
 
+/** Creates the instanced skid-mark mesh and adds it to the scene. */
 export function setupSkidmarks(scene) {
   const plane = new THREE.PlaneGeometry(1, 1);
   geo = new THREE.InstancedBufferGeometry();
@@ -38,7 +39,7 @@ export function setupSkidmarks(scene) {
   scene.add(mesh);
 }
 
-// One strip from (x0, z0) to (x1, z1) with strength 0..1.
+/** One strip from (x0, z0) to (x1, z1) with strength 0..1 (ignores tiny or teleport-sized gaps). */
 export function addSkid(x0, z0, x1, z1, strength = 1) {
   const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
   if (len < 0.05 || len > 4) return;
@@ -51,13 +52,13 @@ export function addSkid(x0, z0, x1, z1, strength = 1) {
   alphas.needsUpdate = true;
 }
 
-// Tyre bookkeeping for one car: lays marks from both rear wheels while `strength` > 0.
+/** Tyre bookkeeping for one car: lays marks from both rear wheels while `strength` > 0. */
 export function skidCar(v, strength) {
-  const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
+  const fwdX = Math.sin(v.heading), fwdZ = Math.cos(v.heading);
   const back = v.spec.len * 0.32, side = v.spec.wid * 0.38;
   const wheels = [
-    [v.x - fx * back - fz * side, v.z - fz * back + fx * side],
-    [v.x - fx * back + fz * side, v.z - fz * back - fx * side],
+    [v.x - fwdX * back - fwdZ * side, v.z - fwdZ * back + fwdX * side],
+    [v.x - fwdX * back + fwdZ * side, v.z - fwdZ * back - fwdX * side],
   ];
   if (strength > 0 && v.skidPrev) wheels.forEach((w, i) => addSkid(v.skidPrev[i][0], v.skidPrev[i][1], w[0], w[1], strength));
   v.skidPrev = strength > 0 ? wheels : null;
